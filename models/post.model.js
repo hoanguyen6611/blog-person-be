@@ -14,6 +14,10 @@ const postSchema = new mongoose.Schema(
             type: String,
             required: true
         },
+        category: {
+            type: String,
+            default: 'general'
+        },
         slug: {
             type: String,
             required: true,

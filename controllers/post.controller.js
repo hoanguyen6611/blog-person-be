@@ -64,9 +64,7 @@ const imagekit = new ImageKit({
     urlEndpoint: 'https://ik.imagekit.io/cjx1zgaos'
 });
 export const uploadAuth = async (req, res) => {
-    console.log(imagekit);
     const result = imagekit.getAuthenticationParameters();
-    console.log(result);
     res.send({
         publicKey: imagekit.options.publicKey,
         ...result

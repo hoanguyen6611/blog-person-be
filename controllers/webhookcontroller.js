@@ -18,7 +18,6 @@ export const clerkWebHook = async (req, res) => {
             message: 'Webhook verification failed'
         });
     }
-    console.log(evt);
     if (evt.type === 'user.created') {
         const newUser = new User({
             clerkUserId: evt.data.id,
@@ -29,7 +28,6 @@ export const clerkWebHook = async (req, res) => {
             last_name: evt.data.last_name,
             first_name: evt.data.first_name
         });
-        console.log(newUser);
         await newUser.save();
     }
     return res.status(200).json({

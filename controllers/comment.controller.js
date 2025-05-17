@@ -1,17 +1,20 @@
 import Comment from '../models/comment.model.js';
 import User from '../models/user.model.js';
 
-export const getAllComment = async (req, res) => {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 5;
+export const getCommentByPost = async (req, res) => {
+    // const page = parseInt(req.query.page) || 1;
+    // const limit = parseInt(req.query.limit) || 5;
 
-    const comments = await Comment.find()
-        .populate('user')
-        .limit(limit)
-        .skip((page - 1) * limit);
-    const totalComments = await Comment.countDocuments();
-    const hasMore = page * limit < totalComments;
-    res.status(200).json({ comments, hasMore });
+    // const comments = await Comment.find()
+    //     .populate('user')
+    //     .limit(limit)
+    //     .skip((page - 1) * limit);
+    // const totalComments = await Comment.countDocuments();
+    // const hasMore = page * limit < totalComments;
+    const comments = await Comment.find({ post: req.params.postId })
+        .populate('user', 'username img')
+        .sort({ createdAt: -1 });
+    res.status(200).json(comments);
 };
 export const getComment = async (req, res) => {
     const post = await Comment.findOne({ slug: req.params.slug }).populate(

@@ -4,15 +4,20 @@ import {
     getPost,
     createNewPost,
     deletePost,
-    uploadAuth
+    uploadAuth,
+    featurePost,
+    updatePost
 } from '../controllers/post.controller.js';
+import increaseVisit from '../middlewares/increaseVisit.js';
 
 const route = express.Router();
 
 route.get('/upload-auth', uploadAuth);
 route.get('/', getPosts);
-route.get('/:slug', getPost);
+route.get('/:slug', increaseVisit, getPost);
 route.post('/', createNewPost);
 route.delete('/:id', deletePost);
+route.patch('/feature', featurePost);
+route.put('/:id', updatePost);
 
 export default route;

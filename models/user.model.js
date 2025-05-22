@@ -20,7 +20,7 @@ const userSchema = new mongoose.Schema(
         img: {
             type: String
         },
-        savedPost: {
+        savedPosts: {
             type: [String],
             default: []
         }

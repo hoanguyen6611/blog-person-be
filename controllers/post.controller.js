@@ -59,10 +59,37 @@ export const getPosts = async (req, res) => {
   const totalPosts = await Post.countDocuments(query);
   const hasMore = page * limit < totalPosts;
   const totalPages = Math.ceil(totalPosts / limit);
-  res.status(200).json({ posts, hasMore, totalPages });
+  res.status(200).json({ posts, hasMore, totalPages, totalPosts });
+};
+
+export const getPostByUser = async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 5;
+  const clerkUserId = req.auth.userId;
+  const role = req.auth.sessionClaims?.metadata?.role || "user";
+  if (!clerkUserId) {
+    return res.status(401).json("Not authenticated");
+  }
+  if (role === "admin") {
+    const posts = await Post.find();
+    const totalPosts = await Post.countDocuments();
+    const hasMore = page * limit < totalPosts;
+    const totalPages = Math.ceil(totalPosts / limit);
+    res.status(200).json({ posts, hasMore, totalPages, totalPosts });
+  } else {
+    const user = await User.findOne({ clerkUserId });
+    if (!user) {
+      return res.status(404).json("User not found!");
+    }
+    const posts = await Post.find({ user: user._id });
+    const totalPosts = await Post.countDocuments();
+    const hasMore = page * limit < totalPosts;
+    const totalPages = Math.ceil(totalPosts / limit);
+    res.status(200).json({ posts, hasMore, totalPages, totalPosts });
+  }
 };
 export const getPost = async (req, res) => {
-  const post = await Post.findOne({ slug: req.params.slug }).populate(
+  const post = await Post.findById(req.params.id).populate(
     "user",
     "username img last_name first_name"
   );

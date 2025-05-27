@@ -1,4 +1,5 @@
 import Category from "../models/category.model.js";
+import userModel from "../models/user.model.js";
 
 export const createNewCategory = async (req, res) => {
   const clerkUserId = req.auth.userId;
@@ -21,4 +22,16 @@ export const getCategories = async (req, res) => {
   const hasMore = page * limit < totalCategories;
   const totalPages = Math.ceil(totalCategories / limit);
   res.status(200).json({ categories, hasMore, totalPages });
+};
+export const deleteCategory = async (req, res) => {
+  const clerkUserId = req.auth.userId;
+  if (!clerkUserId) {
+    return res.status(401).json("Not authenticated");
+  }
+  const role = req.auth.sessionClaims?.metadata?.role || "user";
+  if (role !== "admin") {
+    return res.status(404).json("You do not have the right to delete!!");
+  }
+  await Category.findByIdAndDelete(req.params.id);
+  return res.status(200).json("Delete post succesfully");
 };

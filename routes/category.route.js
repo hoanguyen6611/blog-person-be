@@ -3,11 +3,13 @@ import {
   createNewCategory,
   deleteCategory,
   getCategories,
+  getCategoriesBy,
 } from "../controllers/category.controller.js";
-const route = express.Router();
+const router = express.Router();
 
-route.post("/", createNewCategory);
-route.get("/", getCategories);
-route.delete("/:id", deleteCategory);
+router.post("/", createNewCategory);
+router.get("/", getCategories);
+router.get("/getLimit", getCategoriesBy);
+router.delete("/:id", deleteCategory);
 
-export default route;
+export default router;

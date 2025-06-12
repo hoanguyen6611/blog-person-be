@@ -1,11 +1,13 @@
-import express from 'express';
+import express from "express";
 import {
-    getUserSavedPosts,
-    savedPost
-} from '../controllers/user.controller.js';
-const route = express.Router();
+  getUserSavedPosts,
+  savedPost,
+  sumAllUser,
+} from "../controllers/user.controller.js";
+const router = express.Router();
 
-route.get('/saved', getUserSavedPosts);
-route.patch('/save', savedPost);
+router.get("/saved", getUserSavedPosts);
+router.patch("/save", savedPost);
+router.get("/sumUser", sumAllUser);
 
-export default route;
+export default router;

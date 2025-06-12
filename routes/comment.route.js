@@ -1,15 +1,15 @@
-import express from 'express';
+import express from "express";
 import {
-    createNewComment,
-    getCommentByPost,
-    getComment,
-    deleteComment
-} from '../controllers/comment.controller.js';
-const route = express.Router();
+  createNewComment,
+  getCommentByPost,
+  getComment,
+  deleteComment,
+} from "../controllers/comment.controller.js";
+const router = express.Router();
 
-route.get('/:postId', getCommentByPost);
-route.get('/:postId', getComment);
-route.post('/', createNewComment);
-route.delete('/:id', deleteComment);
+router.get("/:postId", getCommentByPost);
+router.get("/:postId", getComment);
+router.post("/", createNewComment);
+router.delete("/:id", deleteComment);
 
-export default route;
+export default router;

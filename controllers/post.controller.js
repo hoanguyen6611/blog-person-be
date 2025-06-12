@@ -1,11 +1,10 @@
-import categoryModel from "../models/category.model.js";
 import Post from "../models/post.model.js";
 import User from "../models/user.model.js";
 import ImageKit from "imagekit";
 
 export const getPosts = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 5;
+  const limit = parseInt(req.query.limit) || 10;
   const query = {};
   const cat = req.query.cat;
   const author = req.query.author;
@@ -62,6 +61,12 @@ export const getPosts = async (req, res) => {
   res.status(200).json({ posts, hasMore, totalPages, totalPosts });
 };
 
+export const sumAllPost = async (req, res) => {
+  await Post.find();
+  const totalPosts = await Post.countDocuments();
+  res.status(200).json({ totalPosts });
+};
+
 export const getPostByUser = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 5;
@@ -82,11 +87,20 @@ export const getPostByUser = async (req, res) => {
       return res.status(404).json("User not found!");
     }
     const posts = await Post.find({ user: user._id });
-    const totalPosts = await Post.countDocuments();
+    const totalVisits = posts.reduce((sum, post) => sum + (post.visit || 0), 0);
+    const totalPosts = await Post.countDocuments({ user: user._id });
     const hasMore = page * limit < totalPosts;
     const totalPages = Math.ceil(totalPosts / limit);
-    res.status(200).json({ posts, hasMore, totalPages, totalPosts });
+    res
+      .status(200)
+      .json({ posts, hasMore, totalPages, totalPosts, totalVisits });
   }
+};
+
+export const getSumVisitPost = async (req, res) => {
+  const posts = await Post.find();
+  const totalVisits = posts.reduce((sum, post) => sum + (post.visit || 0), 0);
+  res.status(200).json({ totalVisits });
 };
 export const getPost = async (req, res) => {
   const post = await Post.findById(req.params.id).populate(

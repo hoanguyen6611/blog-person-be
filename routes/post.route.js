@@ -8,18 +8,22 @@ import {
   featurePost,
   updatePost,
   getPostByUser,
+  sumAllPost,
+  getSumVisitPost,
 } from "../controllers/post.controller.js";
 import increaseVisit from "../middlewares/increaseVisit.js";
 
-const route = express.Router();
+const router = express.Router();
 
-route.get("/upload-auth", uploadAuth);
-route.get("/", getPosts);
-route.get("/user", getPostByUser);
-route.get("/:id", increaseVisit, getPost);
-route.post("/", createNewPost);
-route.delete("/:id", deletePost);
-route.patch("/feature", featurePost);
-route.put("/:id", updatePost);
+router.get("/upload-auth", uploadAuth);
+router.get("/", getPosts);
+router.get("/sumPost", sumAllPost);
+router.get("/sumVisit", getSumVisitPost);
+router.get("/user", getPostByUser);
+router.get("/:id", increaseVisit, getPost);
+router.post("/", createNewPost);
+router.delete("/:id", deletePost);
+router.patch("/feature", featurePost);
+router.put("/:id", updatePost);
 
-export default route;
+export default router;

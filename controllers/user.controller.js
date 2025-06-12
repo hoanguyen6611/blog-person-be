@@ -34,3 +34,8 @@ export const getUserSavedPosts = async (req, res) => {
 
   res.status(200).json(user.savedPosts);
 };
+export const sumAllUser = async (req, res) => {
+  const users = await User.find();
+  const totalUsers = await User.countDocuments();
+  res.status(200).json({ totalUsers, users });
+};

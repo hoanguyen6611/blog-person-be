@@ -14,10 +14,16 @@ export const getCategories = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 5;
   const categories = await Category.find();
-  // .populate('user', 'username last_name first_name')
-  // .sort(sortObj)
-  // .limit(limit)
-  // .skip((page - 1) * limit);
+  const totalCategories = await Category.countDocuments();
+  const hasMore = page * limit < totalCategories;
+  const totalPages = Math.ceil(totalCategories / limit);
+  res.status(200).json({ categories, hasMore, totalPages, totalCategories });
+};
+export const getCategoriesBy = async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 7;
+  let sortObj = { createdAt: -1 };
+  const categories = await Category.find().limit(limit).sort(sortObj);
   const totalCategories = await Category.countDocuments();
   const hasMore = page * limit < totalCategories;
   const totalPages = Math.ceil(totalCategories / limit);

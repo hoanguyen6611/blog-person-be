@@ -76,7 +76,10 @@ export const getPostByUser = async (req, res) => {
     return res.status(401).json("Not authenticated");
   }
   if (role === "admin") {
-    const posts = await Post.find();
+    const posts = await Post.find().populate(
+      "user",
+      "username last_name first_name"
+    );
     const totalPosts = await Post.countDocuments();
     const hasMore = page * limit < totalPosts;
     const totalPages = Math.ceil(totalPosts / limit);
@@ -86,7 +89,10 @@ export const getPostByUser = async (req, res) => {
     if (!user) {
       return res.status(404).json("User not found!");
     }
-    const posts = await Post.find({ user: user._id });
+    const posts = await Post.find({ user: user._id }).populate(
+      "user",
+      "username last_name first_name"
+    );
     const totalVisits = posts.reduce((sum, post) => sum + (post.visit || 0), 0);
     const totalPosts = await Post.countDocuments({ user: user._id });
     const hasMore = page * limit < totalPosts;

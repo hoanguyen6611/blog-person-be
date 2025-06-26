@@ -66,6 +66,25 @@ export const sumAllPost = async (req, res) => {
   const totalPosts = await Post.countDocuments();
   res.status(200).json({ totalPosts });
 };
+export const sumAllPostByUser = async (req, res) => {
+  const clerkUserId = req.auth.userId;
+  const role = req.auth.sessionClaims?.metadata?.role || "user";
+  if (!clerkUserId) {
+    return res.status(401).json("Not authenticated");
+  }
+  if (role === "admin") {
+    const totalPosts = await Post.countDocuments();
+    res.status(200).json({ totalPosts });
+  } else {
+    const user = await User.findOne({ clerkUserId });
+    if (!user) {
+      return res.status(404).json("User not found!");
+    }
+    const posts = await Post.find({ user: user._id });
+    const totalVisits = posts.reduce((sum, post) => sum + (post.visit || 0), 0);
+    res.status(200).json({ totalVisits });
+  }
+};
 
 export const getPostByUser = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -101,6 +120,27 @@ export const getPostByUser = async (req, res) => {
       .status(200)
       .json({ posts, hasMore, totalPages, totalPosts, totalVisits });
   }
+};
+export const getPostByUserId = async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 5;
+  const clerkUserId = req.auth.userId;
+  if (!clerkUserId) {
+    return res.status(401).json("Not authenticated");
+  }
+  const user = await User.findOne({ clerkUserId });
+  if (!user) {
+    return res.status(404).json("User not found!");
+  }
+  const posts = await Post.find({ user: req.params.id }).populate(
+    "user",
+    "username last_name first_name"
+  );
+  const totalVisits = posts.reduce((sum, post) => sum + (post.visit || 0), 0);
+  const totalPosts = await Post.countDocuments({ user: user._id });
+  const hasMore = page * limit < totalPosts;
+  const totalPages = Math.ceil(totalPosts / limit);
+  res.status(200).json({ posts, hasMore, totalPages, totalPosts, totalVisits });
 };
 
 export const getSumVisitPost = async (req, res) => {

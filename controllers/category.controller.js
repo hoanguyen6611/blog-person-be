@@ -1,5 +1,4 @@
 import Category from "../models/category.model.js";
-import userModel from "../models/user.model.js";
 
 export const createNewCategory = async (req, res) => {
   const clerkUserId = req.auth.userId;
@@ -21,7 +20,7 @@ export const getCategories = async (req, res) => {
 };
 export const getCategoriesBy = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 7;
+  const limit = parseInt(req.query.limit) || 9;
   let sortObj = { createdAt: -1 };
   const categories = await Category.find().limit(limit).sort(sortObj);
   const totalCategories = await Category.countDocuments();

@@ -19,6 +19,12 @@ const postSchema = new mongoose.Schema(
       ref: "Category",
       required: true,
     },
+    tags: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Tag",
+      },
+    ],
     slug: {
       type: String,
       required: true,

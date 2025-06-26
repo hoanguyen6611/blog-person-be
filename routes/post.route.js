@@ -10,6 +10,8 @@ import {
   getPostByUser,
   sumAllPost,
   getSumVisitPost,
+  sumAllPostByUser,
+  getPostByUserId,
 } from "../controllers/post.controller.js";
 import increaseVisit from "../middlewares/increaseVisit.js";
 
@@ -18,8 +20,10 @@ const router = express.Router();
 router.get("/upload-auth", uploadAuth);
 router.get("/", getPosts);
 router.get("/sumPost", sumAllPost);
+router.get("/sumPostUser", sumAllPostByUser);
 router.get("/sumVisit", getSumVisitPost);
 router.get("/user", getPostByUser);
+router.get("/user/:id", getPostByUserId);
 router.get("/:id", increaseVisit, getPost);
 router.post("/", createNewPost);
 router.delete("/:id", deletePost);

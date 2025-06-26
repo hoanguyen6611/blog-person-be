@@ -19,21 +19,33 @@ export const savedPost = async (req, res) => {
       $pull: { savedPosts: postId },
     });
   }
-
   res
     .status(200)
     .json(isSaved ? "Unsave post successfully" : "Save post successfully");
 };
 export const getUserSavedPosts = async (req, res) => {
   const clerkUserId = req.auth.userId;
-
   if (!clerkUserId) {
     return res.status(401).json("Not authenticated!");
   }
-
   const user = await User.findOne({ clerkUserId });
-
   res.status(200).json(user.savedPosts);
+};
+export const getUserLikeComments = async (req, res) => {
+  const clerkUserId = req.auth.userId;
+  if (!clerkUserId) {
+    return res.status(401).json("Not authenticated!");
+  }
+  const user = await User.findOne({ clerkUserId });
+  res.status(200).json(user.likeComments);
+};
+export const getUserByID = async (req, res) => {
+  const clerkUserId = req.auth.userId;
+  if (!clerkUserId) {
+    return res.status(401).json("Not authenticated!");
+  }
+  const user = await User.findById(req.params.id);
+  res.status(200).json(user);
 };
 export const getUserSavedPostsInfor = async (req, res) => {
   const clerkUserId = req.auth.userId;

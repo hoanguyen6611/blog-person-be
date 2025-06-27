@@ -264,6 +264,14 @@ export const featurePost = async (req, res) => {
 };
 export const Statistic = async (req, res) => {
   const totalPosts = await Post.countDocuments();
+  const clerkUserId = req.auth.userId;
+  const role = req.auth.sessionClaims?.metadata?.role || "user";
+  if (!clerkUserId) {
+    return res.status(401).json("Not authenticated");
+  }
+  if (role !== "admin") {
+    return res.status(404).json("You do not have statistic!!");
+  }
 
   const postsByMonth = await Post.aggregate([
     {

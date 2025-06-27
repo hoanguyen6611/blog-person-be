@@ -13,6 +13,7 @@ import {
   sumAllPostByUser,
   getPostByUserId,
   Statistic,
+  relatedPosts,
 } from "../controllers/post.controller.js";
 import increaseVisit from "../middlewares/increaseVisit.js";
 
@@ -27,6 +28,7 @@ router.get("/user", getPostByUser);
 router.get("/user/:id", getPostByUserId);
 router.get("/statistic", Statistic);
 router.get("/:id", increaseVisit, getPost);
+router.get("/related/:id", relatedPosts);
 router.post("/", createNewPost);
 router.delete("/:id", deletePost);
 router.patch("/feature", featurePost);

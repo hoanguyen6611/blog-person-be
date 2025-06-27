@@ -314,3 +314,34 @@ export const Statistic = async (req, res) => {
     topPosts,
   });
 };
+export const relatedPosts = async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id).lean();
+    if (!post) return res.status(404).json({ message: "Not found" });
+
+    const titleKeywords = post.title
+      .split(" ")
+      .slice(0, 4)
+      .map((word) => word.trim())
+      .filter((word) => word.length > 2)
+      .join("|");
+
+    const relatedPosts = await Post.find({
+      _id: { $ne: post._id },
+      $or: [
+        { category: post.category },
+        { tags: { $in: post.tags || [] } },
+        { title: { $regex: titleKeywords, $options: "i" } },
+      ],
+    })
+      .sort({ views: -1, createdAt: -1 })
+      .limit(6)
+      .select("title slug img createdAt")
+      .lean();
+
+    return res.json({ post, relatedPosts });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Lỗi server" });
+  }
+};

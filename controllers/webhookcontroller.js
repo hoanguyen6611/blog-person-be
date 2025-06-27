@@ -20,15 +20,15 @@ export const clerkWebHook = async (req, res) => {
   }
   console.log(evt);
   if (evt.type === "user.created") {
+    console.log(evt);
     const newUser = new User({
       clerkUserId: evt.data.id,
       username: evt.data.username || evt.data.email_addresses[0].email_address,
       email: evt.data.email_addresses[0].email_address,
       img: evt.data.profile_image_url,
-      last_name: evt.data.last_name,
-      first_name: evt.data.first_name,
-      fullname: evt.data.fullname,
+      fullname,
     });
+    console.log(newUser);
     await newUser.save();
   }
   return res.status(200).json({

@@ -23,6 +23,19 @@ export const savedPost = async (req, res) => {
     .status(200)
     .json(isSaved ? "Unsave post successfully" : "Save post successfully");
 };
+export const updateStatus = async (req, res) => {
+  const clerkUserId = req.auth.userId;
+  if (!clerkUserId) {
+    return res.status(401).json("Not authenticated!");
+  }
+  const user = await User.findOne({ clerkUserId });
+
+  await User.findByIdAndUpdate(user._id, {
+    status: req.body.status,
+  });
+
+  res.status(200).json("Status ");
+};
 export const getUserSavedPosts = async (req, res) => {
   const clerkUserId = req.auth.userId;
   if (!clerkUserId) {

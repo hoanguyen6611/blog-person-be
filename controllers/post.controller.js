@@ -262,3 +262,47 @@ export const featurePost = async (req, res) => {
   );
   res.status(200).json(updatePost);
 };
+export const Statistic = async (req, res) => {
+  const totalPosts = await Post.countDocuments();
+
+  const postsByMonth = await Post.aggregate([
+    {
+      $group: {
+        _id: { $substr: ["$createdAt", 0, 7] }, // YYYY-MM
+        count: { $sum: 1 },
+      },
+    },
+    { $sort: { _id: 1 } },
+  ]);
+
+  const postsByCategory = await Post.aggregate([
+    {
+      $group: {
+        _id: "$category",
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+
+  const postsByAuthor = await Post.aggregate([
+    {
+      $group: {
+        _id: "$user", // hoặc $userId
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+  const topPosts = await Post.find({})
+    .sort({ views: -1 })
+    .limit(5)
+    .select("title visit slug _id img")
+    .lean();
+
+  res.status(200).json({
+    totalPosts,
+    postsByMonth,
+    postsByCategory,
+    postsByAuthor,
+    topPosts,
+  });
+};

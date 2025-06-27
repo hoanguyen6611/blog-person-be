@@ -12,6 +12,11 @@ const userSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    fullname: {
+      type: String,
+      required: true,
+      unique: true,
+    },
     email: {
       type: String,
       required: true,
@@ -19,6 +24,10 @@ const userSchema = new mongoose.Schema(
     },
     img: {
       type: String,
+    },
+    status: {
+      type: String,
+      default: "",
     },
     savedPosts: {
       type: [String],

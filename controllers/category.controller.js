@@ -12,6 +12,15 @@ export const createNewCategory = async (req, res) => {
 export const getCategories = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 5;
+  const categories = await Category.find({ status: true });
+  const totalCategories = await Category.countDocuments();
+  const hasMore = page * limit < totalCategories;
+  const totalPages = Math.ceil(totalCategories / limit);
+  res.status(200).json({ categories, hasMore, totalPages, totalCategories });
+};
+export const getAllCategories = async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 5;
   const categories = await Category.find();
   const totalCategories = await Category.countDocuments();
   const hasMore = page * limit < totalCategories;

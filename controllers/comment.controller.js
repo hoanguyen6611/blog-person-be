@@ -1,6 +1,9 @@
 import Comment from "../models/comment.model.js";
-import userModel from "../models/user.model.js";
+import Post from "../models/post.model.js";
+import Notification from "../models/notification.model.js";
 import User from "../models/user.model.js";
+import { io } from "../socket-server.js";
+import { notifyUser } from "../utils/notifyUser.js";
 
 function buildCommentTree(flatComments) {
   const map = {};
@@ -58,7 +61,30 @@ export const createNewComment = async (req, res) => {
   }
   const newComment = new Comment({ user: user._id, ...req.body });
   const comment = await newComment.save();
-  res.status(200).json(comment);
+  const post = await Post.findById(req.body.post).populate("user");
+  if (!post) return res.status(404).json({ message: "Post not found" });
+  await Notification.create({
+    recipientId: post.user._id,
+    type: "comment",
+    postId: req.body.post,
+    commentId: comment._id,
+    message: `${user.username} bình luận bài viết "${post.title}"`,
+  });
+
+  // Gửi socket real-time đến tác giả
+  io.to(post.user.clerkUserId).emit("new-comment", {
+    postId: req.body.post,
+    message: `🗨️ Ai đó vừa bình luận bài "${post.title}"`,
+  });
+  // notifyUser(
+  //   post.user._id,
+  //   `${user.username} bình luận bài viết "${post.title}"`,
+  //   "comment",
+  //   req.body.post,
+  //   comment._id
+  // );
+
+  res.status(201).json({ comment });
 };
 export const deleteComment = async (req, res) => {
   const clerkUserId = req.auth.userId;

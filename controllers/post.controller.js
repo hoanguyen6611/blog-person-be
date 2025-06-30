@@ -312,6 +312,7 @@ export const Statistic = async (req, res) => {
     postsByCategory,
     postsByAuthor,
     topPosts,
+    followerCount,
   });
 };
 export const relatedPosts = async (req, res) => {

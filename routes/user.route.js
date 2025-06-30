@@ -1,6 +1,9 @@
 import express from "express";
 import {
+  countNumberFollow,
+  followerAuthor,
   getUserByID,
+  getUserFollow,
   getUserLikeComments,
   getUserSavedPosts,
   getUserSavedPostsInfor,
@@ -15,6 +18,9 @@ router.get("/likeComment", getUserLikeComments);
 router.get("/savedInf", getUserSavedPostsInfor);
 router.patch("/save", savedPost);
 router.patch("/updateStatus", updateStatus);
+router.patch("/follow", followerAuthor);
+router.get("/follow", getUserFollow);
+router.get("/getNumberFollow/:id", countNumberFollow);
 router.get("/sumUser", sumAllUser);
 router.get("/:id", getUserByID);
 

@@ -4,6 +4,7 @@ import postRouter from "./routes/post.route.js";
 import commentRouter from "./routes/comment.route.js";
 import categoryRouter from "./routes/category.route.js";
 import tagRouter from "./routes/tag.route.js";
+import notificationRouter from "./routes/notification.routes.js";
 import webhookRouter from "./routes/webhook.route.js";
 import connectDB from "./lib/connectDB.js";
 import { clerkMiddleware } from "@clerk/express";
@@ -30,6 +31,7 @@ app.use("/users", userRouter);
 app.use("/comments", commentRouter);
 app.use("/tags", tagRouter);
 app.use("/category", categoryRouter);
+app.use("/notifications", notificationRouter);
 
 app.use((error, req, res, next) => {
   res.status(error.status || 500);

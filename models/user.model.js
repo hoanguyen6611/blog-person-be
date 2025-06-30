@@ -37,6 +37,10 @@ const userSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    follower: {
+      type: [String],
+      default: [],
+    },
   },
   { timestamps: true }
 );

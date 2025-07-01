@@ -187,3 +187,35 @@ export const countNumberFollow = async (req, res) => {
   // console.log("Follower count:", followerCount[0]?.count || 0);
   res.status(200).json({ followerCounts });
 };
+// GET /users/followers
+
+// -> middleware xác thực để lấy req.auth.userId
+
+export const getFollowers = async (req, res) => {
+  const clerkUserId = req.auth.userId;
+  if (!clerkUserId) return res.status(401).json("Not authenticated!");
+
+  const user = await User.findOne({ clerkUserId });
+  if (!user) return res.status(404).json("User not found!");
+
+  // 📌 Lấy tất cả user có follower chứa user._id
+  const followerUserList = await User.find({ follower: user._id });
+
+  res.status(200).json({ followerUserList });
+};
+// GET /users/following
+
+export const getFollowing = async (req, res) => {
+  const clerkUserId = req.auth.userId;
+  if (!clerkUserId) return res.status(401).json("Not authenticated!");
+
+  const user = await User.findOne({ clerkUserId });
+  if (!user) return res.status(404).json("User not found!");
+
+  // 📌 follower của user đang là 1 mảng các userId mà họ đang follow
+  const following = await User.find({ _id: { $in: user.follower } }).select(
+    "username fullname img"
+  );
+
+  res.status(200).json({ following });
+};

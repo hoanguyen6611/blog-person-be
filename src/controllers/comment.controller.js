@@ -3,14 +3,6 @@ import Post from "../models/post.model.js";
 import Notification from "../models/notification.model.js";
 import User from "../models/user.model.js";
 import { io } from "../socket-server.js";
-import { notifyUser } from "../utils/notifyUser.js";
-// const { io } = require("socket.io-client");
-// const socket = io("https://socket.yourdomain.com", {
-//   auth: {
-//     token: "server-token", // nếu socket server cần auth
-//   },
-//   transports: ["websocket"], // tránh polling
-// });
 
 function buildCommentTree(flatComments) {
   const map = {};

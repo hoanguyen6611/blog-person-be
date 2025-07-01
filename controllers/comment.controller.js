@@ -4,6 +4,13 @@ import Notification from "../models/notification.model.js";
 import User from "../models/user.model.js";
 import { io } from "../socket-server.js";
 import { notifyUser } from "../utils/notifyUser.js";
+// const { io } = require("socket.io-client");
+// const socket = io("https://socket.yourdomain.com", {
+//   auth: {
+//     token: "server-token", // nếu socket server cần auth
+//   },
+//   transports: ["websocket"], // tránh polling
+// });
 
 function buildCommentTree(flatComments) {
   const map = {};
@@ -76,6 +83,10 @@ export const createNewComment = async (req, res) => {
     postId: req.body.post,
     message: `🗨️ Ai đó vừa bình luận bài "${post.title}"`,
   });
+  // socket.emit("new-comment", {
+  //   postId: req.body.post,
+  //   message: `🗨️ Ai đó vừa bình luận bài "${post.title}"`,
+  // });
   // notifyUser(
   //   post.user._id,
   //   `${user.username} bình luận bài viết "${post.title}"`,

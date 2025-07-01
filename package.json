@@ -17,7 +17,9 @@
     "express": "^5.1.0",
     "imagekit": "^6.0.0",
     "mongoose": "^8.14.1",
+    "node-cron": "^4.2.0",
     "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
     "svix": "^1.65.0"
   }
 }

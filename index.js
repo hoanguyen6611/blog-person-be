@@ -9,6 +9,7 @@ import webhookRouter from "./routes/webhook.route.js";
 import connectDB from "./lib/connectDB.js";
 import { clerkMiddleware } from "@clerk/express";
 import cors from "cors";
+import "./cron/publishJob.js";
 
 const app = express();
 

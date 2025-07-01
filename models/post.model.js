@@ -45,6 +45,8 @@ const postSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    publishedAt: { type: Date, default: Date.now }, // Ngày giờ publish
+    isPublished: { type: Boolean, default: false }, // Đã đăng chưa
   },
   { timestamps: true }
 );

@@ -14,6 +14,7 @@ import {
   getPostByUserId,
   Statistic,
   relatedPosts,
+  getPostByUserSchedule,
 } from "../controllers/post.controller.js";
 import increaseVisit from "../middlewares/increaseVisit.js";
 
@@ -25,6 +26,7 @@ router.get("/sumPost", sumAllPost);
 router.get("/sumPostUser", sumAllPostByUser);
 router.get("/sumVisit", getSumVisitPost);
 router.get("/user", getPostByUser);
+router.get("/user/schedule", getPostByUserSchedule);
 router.get("/user/:id", getPostByUserId);
 router.get("/statistic", Statistic);
 router.get("/:id", increaseVisit, getPost);

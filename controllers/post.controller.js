@@ -5,7 +5,9 @@ import ImageKit from "imagekit";
 export const getPosts = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
-  const query = {};
+  const query = {
+    isPublished: true,
+  };
   const cat = req.query.cat;
   const author = req.query.author;
   const searchQuery = req.query.search;
@@ -63,7 +65,7 @@ export const getPosts = async (req, res) => {
 
 export const sumAllPost = async (req, res) => {
   await Post.find();
-  const totalPosts = await Post.countDocuments();
+  const totalPosts = await Post.countDocuments({ isPublished: true });
   res.status(200).json({ totalPosts });
 };
 export const sumAllPostByUser = async (req, res) => {
@@ -73,7 +75,7 @@ export const sumAllPostByUser = async (req, res) => {
     return res.status(401).json("Not authenticated");
   }
   if (role === "admin") {
-    const totalPosts = await Post.countDocuments();
+    const totalPosts = await Post.countDocuments({ isPublished: true });
     res.status(200).json({ totalPosts });
   } else {
     const user = await User.findOne({ clerkUserId });
@@ -95,7 +97,7 @@ export const getPostByUser = async (req, res) => {
     return res.status(401).json("Not authenticated");
   }
   if (role === "admin") {
-    const posts = await Post.find().populate(
+    const posts = await Post.find({ isPublished: true }).populate(
       "user",
       "username last_name first_name"
     );
@@ -108,12 +110,53 @@ export const getPostByUser = async (req, res) => {
     if (!user) {
       return res.status(404).json("User not found!");
     }
-    const posts = await Post.find({ user: user._id }).populate(
+    const posts = await Post.find({
+      user: user._id,
+      isPublished: true,
+    }).populate("user", "username last_name first_name");
+    const totalVisits = posts.reduce((sum, post) => sum + (post.visit || 0), 0);
+    const totalPosts = await Post.countDocuments({
+      user: user._id,
+      isPublished: true,
+    });
+    const hasMore = page * limit < totalPosts;
+    const totalPages = Math.ceil(totalPosts / limit);
+    res
+      .status(200)
+      .json({ posts, hasMore, totalPages, totalPosts, totalVisits });
+  }
+};
+export const getPostByUserSchedule = async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 5;
+  const clerkUserId = req.auth.userId;
+  const role = req.auth.sessionClaims?.metadata?.role || "user";
+  if (!clerkUserId) {
+    return res.status(401).json("Not authenticated");
+  }
+  if (role === "admin") {
+    const posts = await Post.find({ isPublished: false }).populate(
       "user",
       "username last_name first_name"
     );
+    const totalPosts = await Post.countDocuments();
+    const hasMore = page * limit < totalPosts;
+    const totalPages = Math.ceil(totalPosts / limit);
+    res.status(200).json({ posts, hasMore, totalPages, totalPosts });
+  } else {
+    const user = await User.findOne({ clerkUserId });
+    if (!user) {
+      return res.status(404).json("User not found!");
+    }
+    const posts = await Post.find({
+      user: user._id,
+      isPublished: false,
+    }).populate("user", "username last_name first_name");
     const totalVisits = posts.reduce((sum, post) => sum + (post.visit || 0), 0);
-    const totalPosts = await Post.countDocuments({ user: user._id });
+    const totalPosts = await Post.countDocuments({
+      user: user._id,
+      isPublished: false,
+    });
     const hasMore = page * limit < totalPosts;
     const totalPages = Math.ceil(totalPosts / limit);
     res
@@ -132,19 +175,22 @@ export const getPostByUserId = async (req, res) => {
   if (!user) {
     return res.status(404).json("User not found!");
   }
-  const posts = await Post.find({ user: req.params.id }).populate(
-    "user",
-    "username last_name first_name"
-  );
+  const posts = await Post.find({
+    user: req.params.id,
+    isPublished: true,
+  }).populate("user", "username last_name first_name");
   const totalVisits = posts.reduce((sum, post) => sum + (post.visit || 0), 0);
-  const totalPosts = await Post.countDocuments({ user: user._id });
+  const totalPosts = await Post.countDocuments({
+    user: user._id,
+    isPublished: true,
+  });
   const hasMore = page * limit < totalPosts;
   const totalPages = Math.ceil(totalPosts / limit);
   res.status(200).json({ posts, hasMore, totalPages, totalPosts, totalVisits });
 };
 
 export const getSumVisitPost = async (req, res) => {
-  const posts = await Post.find();
+  const posts = await Post.find({ isPublished: true });
   const totalVisits = posts.reduce((sum, post) => sum + (post.visit || 0), 0);
   res.status(200).json({ totalVisits });
 };
@@ -263,7 +309,7 @@ export const featurePost = async (req, res) => {
   res.status(200).json(updatePost);
 };
 export const Statistic = async (req, res) => {
-  const totalPosts = await Post.countDocuments();
+  const totalPosts = await Post.countDocuments({ isPublished: true });
   const clerkUserId = req.auth.userId;
   const role = req.auth.sessionClaims?.metadata?.role || "user";
   if (!clerkUserId) {
@@ -300,7 +346,7 @@ export const Statistic = async (req, res) => {
       },
     },
   ]);
-  const topPosts = await Post.find({})
+  const topPosts = await Post.find({ isPublished: true })
     .sort({ views: -1 })
     .limit(5)
     .select("title visit slug _id img")
@@ -312,7 +358,6 @@ export const Statistic = async (req, res) => {
     postsByCategory,
     postsByAuthor,
     topPosts,
-    followerCount,
   });
 };
 export const relatedPosts = async (req, res) => {
@@ -329,6 +374,7 @@ export const relatedPosts = async (req, res) => {
 
     const relatedPosts = await Post.find({
       _id: { $ne: post._id },
+      isPublished: true,
       $or: [
         { category: post.category },
         { tags: { $in: post.tags || [] } },

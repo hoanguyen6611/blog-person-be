@@ -4,10 +4,10 @@ import {
   deleteTag,
   getAllNameTags,
 } from "../controllers/tag.controller.js";
-const router = express.Router();
+const tagRouter = express.Router();
 
-router.post("/", createNewTag);
-router.get("/", getAllNameTags);
-router.delete("/:id", deleteTag);
+tagRouter.post("/", createNewTag);
+tagRouter.get("/", getAllNameTags);
+tagRouter.delete("/:id", deleteTag);
 
-export default router;
+export default tagRouter;

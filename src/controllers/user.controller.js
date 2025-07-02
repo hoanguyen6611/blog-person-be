@@ -126,7 +126,55 @@ export const getUserFollow = async (req, res) => {
     return res.status(401).json("Not authenticated!");
   }
   const user = await User.findOne({ clerkUserId });
-  res.status(200).json(user.follower);
+  const followers = await User.find({ follower: user._id });
+  const following = await User.find({ _id: { $in: user.follower } }).select(
+    "username fullname img"
+  );
+  res.status(200).json({ followers, following });
+};
+export const getUserOtherFollow = async (req, res) => {
+  const clerkUserId = req.auth.userId;
+  const userId = req.params.id;
+  if (!clerkUserId) {
+    return res.status(401).json("Not authenticated!");
+  }
+  const user = await User.findOne({ userId });
+  const followers = await User.find({ follower: userId });
+  const following = await User.find({ _id: { $in: user.follower } }).select(
+    "username fullname img"
+  );
+  res.status(200).json({ followers, following });
+};
+
+export const getFollowersAndFollowing = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // ✨ Danh sách người bạn đang theo dõi (from field `follower`)
+    const followingUsers = await User.find({
+      _id: { $in: user.follower.map((id) => new mongoose.Types.ObjectId(id)) },
+    }).select("username email img");
+
+    // ✨ Danh sách người theo dõi bạn (họ có bạn trong follower của họ)
+    const followerUsers = await User.find({
+      follower: id,
+    }).select("username email img");
+
+    res.status(200).json({
+      following: followingUsers,
+      followers: followerUsers,
+    });
+  } catch (error) {
+    console.error("Error getFollowersAndFollowing:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
 };
 export const getUserLikeComments = async (req, res) => {
   const clerkUserId = req.auth.userId;
@@ -189,8 +237,6 @@ export const countNumberFollow = async (req, res) => {
 };
 // GET /users/followers
 
-// -> middleware xác thực để lấy req.auth.userId
-
 export const getFollowers = async (req, res) => {
   const clerkUserId = req.auth.userId;
   if (!clerkUserId) return res.status(401).json("Not authenticated!");
@@ -218,4 +264,12 @@ export const getFollowing = async (req, res) => {
   );
 
   res.status(200).json({ following });
+};
+export const getUserFollowList = async (req, res) => {
+  const clerkUserId = req.auth.userId;
+  if (!clerkUserId) {
+    return res.status(401).json("Not authenticated!");
+  }
+  const user = await User.findOne({ clerkUserId });
+  res.status(200).json(user.follower);
 };

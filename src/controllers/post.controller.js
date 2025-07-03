@@ -308,7 +308,7 @@ export const featurePost = async (req, res) => {
   );
   res.status(200).json(updatePost);
 };
-export const Statistic = async (req, res) => {
+export const statistic = async (req, res) => {
   const totalPosts = await Post.countDocuments({ isPublished: true });
   const clerkUserId = req.auth.userId;
   const role = req.auth.sessionClaims?.metadata?.role || "user";

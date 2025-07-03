@@ -12,7 +12,7 @@ import {
   getSumVisitPost,
   sumAllPostByUser,
   getPostByUserId,
-  Statistic,
+  statistic,
   relatedPosts,
   getPostByUserSchedule,
 } from "../controllers/post.controller.js";
@@ -28,7 +28,7 @@ postRouter.get("/sumVisit", getSumVisitPost);
 postRouter.get("/user", getPostByUser);
 postRouter.get("/user/schedule", getPostByUserSchedule);
 postRouter.get("/user/:id", getPostByUserId);
-postRouter.get("/statistic", Statistic);
+postRouter.get("/statistic", statistic);
 postRouter.get("/:id", increaseVisit, getPost);
 postRouter.get("/related/:id", relatedPosts);
 postRouter.post("/", createNewPost);

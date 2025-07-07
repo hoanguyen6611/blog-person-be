@@ -19,7 +19,9 @@ export const getNotificationsByUser = async (req, res) => {
     return res.status(401).json("Not authenticated");
   }
   const user = await User.findOne({ clerkUserId });
-  const notifications = await Notification.find({ recipientId: user._id });
+  const notifications = await Notification.find({ recipientId: user._id }).sort(
+    { createdAt: -1 }
+  );
 
   res.json(notifications);
 };

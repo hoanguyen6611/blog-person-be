@@ -6,6 +6,7 @@ import { verifyToken } from "@clerk/clerk-sdk-node"; // Dùng để xác thực 
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
+  origin: "*",
   cors: { origin: "*" },
 });
 
@@ -40,6 +41,7 @@ io.on("connection", (socket) => {
 // Export socket instance
 export { io };
 
-httpServer.listen(3001, () => {
-  console.log("🚀 Socket server running at http://localhost:3001");
-});
+const PORT = process.env.PORT || 3001;
+httpServer.listen(PORT, () =>
+  console.log(`🚀 Socket server running on port ${PORT}`)
+);

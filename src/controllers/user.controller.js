@@ -84,7 +84,8 @@ export const followerAuthor = async (req, res) => {
       type: "follow",
       message: `${user.username} theo dõi bạn`,
     });
-    io.to(userFollow.clerkUserId).emit("new-comment", {
+    io.to(userFollow.clerkUserId).emit("new-follow", {
+      type: "follow",
       message: `🗨️ ${user.username} vừa theo dõi bạn`,
     });
   } else {

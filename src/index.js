@@ -26,7 +26,7 @@ app.use(function (req, res, next) {
   next();
 });
 
-app.use("/api", router);
+app.use("", router);
 
 app.use((error, req, res, next) => {
   res.status(error.status || 500);

@@ -3,11 +3,17 @@ import connectDB from "./lib/connectDB.js";
 import { clerkMiddleware } from "@clerk/express";
 import cors from "cors";
 import "./cron/publishJob.js";
-import router from "./routes/indes.js";
-
+import router from "./routes/index.js";
+import dotenv from "dotenv";
+dotenv.config();
 const app = express();
 
-app.use(cors(process.env.CLIENT_URL));
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || "*", // hoặc chỉ định cụ thể origin
+    credentials: true,
+  })
+);
 app.use(clerkMiddleware());
 app.use(express.json());
 

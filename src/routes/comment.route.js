@@ -6,14 +6,19 @@ import {
   deleteComment,
   disLikeComment,
   likeComment,
+  likeCommentV1,
+  disLikeCommentV1,
+  likeCommentList,
 } from "../controllers/comment.controller.js";
-const router = express.Router();
+const commentRouter = express.Router();
 
-router.get("/:postId", getCommentByPost);
-router.get("/:postId", getComment);
-router.post("/", createNewComment);
-router.delete("/:id", deleteComment);
-router.patch("/like", likeComment);
-router.patch("/disLike", disLikeComment);
+commentRouter.get("/:postId", getCommentByPost);
+commentRouter.get("/:postId", getComment);
+commentRouter.post("/", createNewComment);
+commentRouter.delete("/:id", deleteComment);
+commentRouter.patch("/like", likeCommentV1);
+commentRouter.patch("/disLike", disLikeCommentV1);
+commentRouter.patch("/likeCommentList", likeCommentList);
+// router.patch("/disLike", disLikeComment);
 
-export default router;
+export default commentRouter;

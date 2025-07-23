@@ -1,6 +1,8 @@
+import notificationModel from "../models/notification.model.js";
 import Post from "../models/post.model.js";
 import User from "../models/user.model.js";
 import ImageKit from "imagekit";
+import { io } from "../socket-server.js";
 
 export const getPosts = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -221,7 +223,24 @@ export const createNewPost = async (req, res) => {
   }
   const newPost = new Post({ user: user._id, slug, ...req.body });
   const post = await newPost.save();
-  res.status(200).json(post);
+  const followers = await User.find({ follower: user._id });
+  await Promise.all(
+    followers.map(async (follower) => {
+      await notificationModel.create({
+        recipientId: follower._id,
+        type: "post",
+        postId: post._id,
+        message: `${user.username} published a new post "${post.title}"`,
+      });
+      // Gửi socket real-time đến follower
+      io.to(follower.clerkUserId).emit("new-post", {
+        type: "post",
+        postId: post._id,
+        message: `📝 ${user.username} vừa đăng bài viết mới "${post.title}"`,
+      });
+    })
+  );
+  res.status(201).json(post);
 };
 export const updatePost = async (req, res) => {
   const clerkUserId = req.auth.userId;
@@ -308,7 +327,7 @@ export const featurePost = async (req, res) => {
   );
   res.status(200).json(updatePost);
 };
-export const Statistic = async (req, res) => {
+export const statistic = async (req, res) => {
   const totalPosts = await Post.countDocuments({ isPublished: true });
   const clerkUserId = req.auth.userId;
   const role = req.auth.sessionClaims?.metadata?.role || "user";

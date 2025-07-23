@@ -12,28 +12,28 @@ import {
   getSumVisitPost,
   sumAllPostByUser,
   getPostByUserId,
-  Statistic,
+  statistic,
   relatedPosts,
   getPostByUserSchedule,
 } from "../controllers/post.controller.js";
 import increaseVisit from "../middlewares/increaseVisit.js";
 
-const router = express.Router();
+const postRouter = express.Router();
 
-router.get("/upload-auth", uploadAuth);
-router.get("/", getPosts);
-router.get("/sumPost", sumAllPost);
-router.get("/sumPostUser", sumAllPostByUser);
-router.get("/sumVisit", getSumVisitPost);
-router.get("/user", getPostByUser);
-router.get("/user/schedule", getPostByUserSchedule);
-router.get("/user/:id", getPostByUserId);
-router.get("/statistic", Statistic);
-router.get("/:id", increaseVisit, getPost);
-router.get("/related/:id", relatedPosts);
-router.post("/", createNewPost);
-router.delete("/:id", deletePost);
-router.patch("/feature", featurePost);
-router.put("/:id", updatePost);
+postRouter.get("/upload-auth", uploadAuth);
+postRouter.get("/", getPosts);
+postRouter.get("/sumPost", sumAllPost);
+postRouter.get("/sumPostUser", sumAllPostByUser);
+postRouter.get("/sumVisit", getSumVisitPost);
+postRouter.get("/user", getPostByUser);
+postRouter.get("/user/schedule", getPostByUserSchedule);
+postRouter.get("/user/:id", getPostByUserId);
+postRouter.get("/statistic", statistic);
+postRouter.get("/:id", increaseVisit, getPost);
+postRouter.get("/related/:id", relatedPosts);
+postRouter.post("/", createNewPost);
+postRouter.delete("/:id", deletePost);
+postRouter.patch("/feature", featurePost);
+postRouter.put("/:id", updatePost);
 
-export default router;
+export default postRouter;

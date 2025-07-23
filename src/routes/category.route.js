@@ -7,13 +7,13 @@ import {
   getCategories,
   getCategoriesBy,
 } from "../controllers/category.controller.js";
-const router = express.Router();
+const categoryRouter = express.Router();
 
-router.post("/", createNewCategory);
-router.get("/", getCategories);
-router.get("/all", getAllCategories);
-router.get("/getLimit", getCategoriesBy);
-router.delete("/:id", deleteCategory);
-router.patch("/changeStatus/:id", changeStatus);
+categoryRouter.post("/", createNewCategory);
+categoryRouter.get("/", getCategories);
+categoryRouter.get("/all", getAllCategories);
+categoryRouter.get("/getLimit", getCategoriesBy);
+categoryRouter.delete("/:id", deleteCategory);
+categoryRouter.patch("/changeStatus/:id", changeStatus);
 
-export default router;
+export default categoryRouter;

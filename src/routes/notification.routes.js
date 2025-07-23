@@ -1,7 +1,15 @@
 import express from "express";
-import { getNotificationsByUser } from "../controllers/notification.controller.js";
-const router = express.Router();
+import {
+  getNotificationsByUser,
+  getNotificationsByUserLimit,
+  markAllAsRead,
+  markNotificationAsRead,
+} from "../controllers/notification.controller.js";
+const notificationRouter = express.Router();
 
-router.get("/", getNotificationsByUser);
+notificationRouter.get("/", getNotificationsByUserLimit);
+notificationRouter.get("/all", getNotificationsByUser);
+notificationRouter.patch("/:id/read", markNotificationAsRead);
+notificationRouter.patch("/readAll", markAllAsRead);
 
-export default router;
+export default notificationRouter;

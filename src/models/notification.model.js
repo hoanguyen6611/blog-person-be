@@ -10,7 +10,7 @@ const notificationSchema = new mongoose.Schema(
     }, // ID người nhận
     type: {
       type: String,
-      enum: ["comment", "reply", "follow", "other"],
+      enum: ["comment", "reply", "follow", "like", "post", "other"],
       default: "comment",
     },
     postId: { type: mongoose.Schema.Types.ObjectId, ref: "Post" },

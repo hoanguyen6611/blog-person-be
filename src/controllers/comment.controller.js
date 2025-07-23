@@ -72,20 +72,10 @@ export const createNewComment = async (req, res) => {
 
   // Gửi socket real-time đến tác giả
   io.to(post.user.clerkUserId).emit("new-comment", {
+    type: "comment",
     postId: req.body.post,
     message: `🗨️ Ai đó vừa bình luận bài "${post.title}"`,
   });
-  // socket.emit("new-comment", {
-  //   postId: req.body.post,
-  //   message: `🗨️ Ai đó vừa bình luận bài "${post.title}"`,
-  // });
-  // notifyUser(
-  //   post.user._id,
-  //   `${user.username} bình luận bài viết "${post.title}"`,
-  //   "comment",
-  //   req.body.post,
-  //   comment._id
-  // );
 
   res.status(201).json({ comment });
 };
@@ -189,4 +179,69 @@ export const disLikeComment = async (req, res) => {
     console.error("Error unliking comment:", error);
     res.status(500).json("Internal server error");
   }
+};
+
+export const likeCommentV1 = async (req, res) => {
+  const clerkUserId = req.auth.userId;
+  const id = req.body.id; // id = commentId
+  if (!clerkUserId) return res.status(401).json("Not authenticated");
+  try {
+    const user = await User.findOne({ clerkUserId });
+    if (!user) return res.status(404).json("User not found");
+    if (user.likeComments.includes(id)) {
+      return res.status(400).json("You already liked this comment");
+    }
+    await Comment.findByIdAndUpdate(id, { $inc: { like: 1 } });
+    const comment = await Comment.findById(id).populate("user");
+    const commentOther = await Comment.findById(id).populate("post");
+    user.likeComments.push(id);
+    await user.save();
+    await Notification.create({
+      recipientId: comment.user._id,
+      type: "like",
+      postId: commentOther.post._id,
+      commentId: comment._id,
+      message: `${user.username} like comment "${comment.desc}" in post "${commentOther.post.title}"`,
+    });
+    // Gửi socket real-time đến tác giả
+    io.to(comment.user.clerkUserId).emit("new-like", {
+      type: "like",
+      postId: commentOther.post._id,
+      message: `🗨️ Ai đó vừa like comment "${comment.desc}" ở bài "${commentOther.post.title}"`,
+    });
+    res.status(200).json("Liked comment successfully");
+  } catch (err) {
+    console.error(err);
+    res.status(500).json("Something went wrong");
+  }
+};
+export const disLikeCommentV1 = async (req, res) => {
+  const clerkUserId = req.auth.userId;
+  if (!clerkUserId) return res.status(401).json("Not authenticated");
+  try {
+    const id = req.body.id;
+
+    const user = await User.findOne({ clerkUserId });
+    if (!user) return res.status(404).json("User not found");
+
+    if (!user.likeComments.includes(id)) {
+      return res.status(400).json("You haven't liked this comment");
+    }
+
+    await Comment.findByIdAndUpdate(id, { $inc: { like: -1 } });
+    user.likeComments = user.likeComments.filter((cid) => cid !== id);
+    await user.save();
+
+    res.status(200).json("Disliked comment successfully");
+  } catch (err) {
+    console.error(err);
+    res.status(500).json("Something went wrong");
+  }
+};
+export const likeCommentList = async (req, res) => {
+  const clerkUserId = req.auth.userId;
+
+  if (!clerkUserId) return res.status(401).json("Not authenticated");
+  const user = await User.findOne({ clerkUserId });
+  res.status(200).json(user.likeComments);
 };

@@ -8,7 +8,7 @@ export const createNewTag = async (req, res) => {
   const { name } = await req.body;
   const slug = name.toLowerCase().replace(/\s+/g, "-");
   const tag = await Tag.create({ name, slug });
-  res.status(200).json(tag);
+  res.status(201).json(tag);
 };
 export const getAllNameTags = async (req, res) => {
   const tags = await Tag.find();

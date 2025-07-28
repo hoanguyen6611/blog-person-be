@@ -15,6 +15,14 @@ export const getPosts = async (req, res) => {
   const searchQuery = req.query.search;
   const sortQuery = req.query.sort;
   const featured = req.query.featured;
+  const from = req.query.from;
+  const to = req.query.to;
+  if (from || to) {
+    query.createdAt = {
+      $gte: from,
+      $lte: to,
+    };
+  }
   if (cat) {
     query.category = cat;
   }

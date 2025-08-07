@@ -378,6 +378,27 @@ export const statistic = async (req, res) => {
     .limit(5)
     .select("title visit slug _id img")
     .lean();
+  const monthlyVisit = await Post.aggregate([
+    {
+      $match: {
+        isPublished: true, // (nếu chỉ tính bài đã đăng)
+      },
+    },
+    {
+      $group: {
+        // _id: {
+        //   year: { $year: "$createdAt" },
+        //   month: { $month: "$createdAt" },
+        // },
+        _id: { $substr: ["$createdAt", 0, 7] },
+        count: { $sum: "$visit" },
+        // count: { $sum: 1 },
+      },
+    },
+    {
+      $sort: { "_id.year": -1, "_id.month": -1 }, // sắp xếp theo thời gian giảm dần
+    },
+  ]);
 
   res.status(200).json({
     totalPosts,
@@ -385,6 +406,7 @@ export const statistic = async (req, res) => {
     postsByCategory,
     postsByAuthor,
     topPosts,
+    monthlyVisit,
   });
 };
 export const relatedPosts = async (req, res) => {

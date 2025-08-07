@@ -29,7 +29,7 @@ export const getAllCategories = async (req, res) => {
 };
 export const getCategoriesBy = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 9;
+  const limit = parseInt(req.query.limit) || 20;
   let sortObj = { createdAt: -1 };
   const categories = await Category.find().limit(limit).sort(sortObj);
   const totalCategories = await Category.countDocuments();

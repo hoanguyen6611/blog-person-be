@@ -14,8 +14,18 @@ const options = {
         url: "http://localhost:3000",
       },
     ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+          description: "Clerk session token (Authorization: Bearer <token>)",
+        },
+      },
+    },
   },
-  apis: ["./routes/*.js", "./models/*.js"], // đường dẫn tới các file chứa Swagger comment
+  apis: ["./src/routes/*.js", "./src/models/*.js"], // đường dẫn tới các file chứa Swagger comment
 };
 
 const swaggerSpec = swaggerJSDoc(options);

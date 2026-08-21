@@ -8,9 +8,20 @@ import { setupSwagger } from "./config/swagger.js";
 
 const app = express();
 
+const allowedOrigin = process.env.CLIENT_URL?.replace(/\/+$/, "");
+const isLocalhostOrigin = (origin) =>
+  /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL,
+    origin: (origin, callback) => {
+      // Request không có Origin (curl, Postman, server-to-server) luôn được phép.
+      if (!origin) return callback(null, true);
+      if (origin.replace(/\/+$/, "") === allowedOrigin || isLocalhostOrigin(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   })
 );

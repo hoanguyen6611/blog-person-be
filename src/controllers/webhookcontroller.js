@@ -14,13 +14,14 @@ export const clerkWebHook = async (req, res) => {
   try {
     evt = wh.verify(payload, headers);
   } catch (err) {
-    res.status(400).json({
+    return res.status(400).json({
       message: "Webhook verification failed",
     });
   }
-  console.log(evt);
   if (evt.type === "user.created") {
-    console.log(evt);
+    const fullname = [evt.data.first_name, evt.data.last_name]
+      .filter(Boolean)
+      .join(" ");
     const newUser = new User({
       clerkUserId: evt.data.id,
       username: evt.data.username || evt.data.email_addresses[0].email_address,
@@ -28,7 +29,6 @@ export const clerkWebHook = async (req, res) => {
       img: evt.data.profile_image_url,
       fullname,
     });
-    console.log(newUser);
     await newUser.save();
   }
   return res.status(200).json({

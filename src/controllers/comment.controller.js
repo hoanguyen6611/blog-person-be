@@ -1,7 +1,6 @@
 import Comment from "../models/comment.model.js";
 import Post from "../models/post.model.js";
 import Notification from "../models/notification.model.js";
-import User from "../models/user.model.js";
 import { io } from "../socket-server.js";
 
 function buildCommentTree(flatComments) {
@@ -43,22 +42,14 @@ export const getCommentByPost = async (req, res) => {
   const commentsAll = buildCommentTree(comments);
   res.status(200).json(commentsAll);
 };
-export const getComment = async (req, res) => {
-  const post = await Comment.findOne({ slug: req.params.slug }).populate(
-    "user"
-  );
-  res.status(200).json(post);
-};
 export const createNewComment = async (req, res) => {
-  const clerkUserId = req.auth.userId;
-  if (!clerkUserId) {
-    return res.status(401).json("Not authenticated");
-  }
-  const user = await User.findOne({ clerkUserId });
-  if (!user) {
-    return res.status(404).json("User not found!");
-  }
-  const newComment = new Comment({ user: user._id, ...req.body });
+  const user = req.dbUser;
+  const newComment = new Comment({
+    user: user._id,
+    post: req.body.post,
+    desc: req.body.desc,
+    parentId: req.body.parentId,
+  });
   const comment = await newComment.save();
   const post = await Post.findById(req.body.post).populate("user");
   if (!post) return res.status(404).json({ message: "Post not found" });
@@ -80,114 +71,24 @@ export const createNewComment = async (req, res) => {
   res.status(201).json({ comment });
 };
 export const deleteComment = async (req, res) => {
-  const clerkUserId = req.auth.userId;
   const id = req.params.id;
 
-  if (!clerkUserId) {
-    return res.status(401).json("Not authenticated!");
-  }
-  const role = req.auth.sessionClaims?.metadata?.role || "user";
-  if (role === "admin") {
+  if (req.role === "admin") {
     await Comment.findByIdAndDelete(id);
     return res.status(200).json("Comment deleted");
   }
-  const user = User.findOne({ clerkUserId });
-  const deleteComment = await Comment.findByIdAndDelete({
-    _id: id,
-    user: user._id,
-  });
-  if (!deleteComment) {
+  const comment = await Comment.findOne({ _id: id, user: req.dbUser._id });
+  if (!comment) {
     return res.status(403).json("You can delete only your comment!");
   }
+  await Comment.findByIdAndDelete(id);
   res.status(200).json("Comment deleted");
-};
-export const likeComment = async (req, res) => {
-  const clerkUserId = req.auth.userId;
-  const commentId = req.body.id;
-
-  if (!clerkUserId) return res.status(401).json("Not authenticated");
-
-  try {
-    const user = await User.findOne({ clerkUserId });
-    const comment = await Comment.findById(commentId);
-    if (!comment) return res.status(404).json("Comment not found");
-
-    const alreadyLiked = user.likeComments.includes(commentId);
-    if (alreadyLiked) {
-      await User.findByIdAndUpdate(user._id, {
-        $pull: { likeComments: commentId },
-      });
-
-      // Giảm số lượng like
-      const updatedComment = await Comment.findByIdAndUpdate(
-        commentId,
-        { $inc: { like: -1 } },
-        { new: true }
-      );
-
-      res.status(200).json(updatedComment);
-    }
-
-    // Thêm vào danh sách like của user
-    await User.findByIdAndUpdate(user._id, {
-      $push: { likeComments: commentId },
-    });
-
-    // Tăng số lượng like
-    const updatedComment = await Comment.findByIdAndUpdate(
-      commentId,
-      { $inc: { like: 1 } },
-      { new: true }
-    );
-
-    res.status(200).json(updatedComment);
-  } catch (error) {
-    console.error("Error liking comment:", error);
-    res.status(500).json("Internal server error");
-  }
-};
-export const disLikeComment = async (req, res) => {
-  const clerkUserId = req.auth.userId;
-  const commentId = req.body.id;
-
-  if (!clerkUserId) return res.status(401).json("Not authenticated");
-
-  try {
-    const user = await User.findOne({ clerkUserId });
-    const comment = await Comment.findById(commentId);
-    if (!comment) return res.status(404).json("Comment not found");
-
-    const alreadyLiked = user.likeComments.includes(commentId);
-    if (!alreadyLiked) {
-      return res.status(400).json("You haven't liked this comment yet");
-    }
-
-    // Gỡ like khỏi danh sách user
-    await User.findByIdAndUpdate(user._id, {
-      $pull: { likeComments: commentId },
-    });
-
-    // Giảm số lượng like
-    const updatedComment = await Comment.findByIdAndUpdate(
-      commentId,
-      { $inc: { like: -1 } },
-      { new: true }
-    );
-
-    res.status(200).json(updatedComment);
-  } catch (error) {
-    console.error("Error unliking comment:", error);
-    res.status(500).json("Internal server error");
-  }
 };
 
 export const likeCommentV1 = async (req, res) => {
-  const clerkUserId = req.auth.userId;
   const id = req.body.id; // id = commentId
-  if (!clerkUserId) return res.status(401).json("Not authenticated");
   try {
-    const user = await User.findOne({ clerkUserId });
-    if (!user) return res.status(404).json("User not found");
+    const user = req.dbUser;
     if (user.likeComments.includes(id)) {
       return res.status(400).json("You already liked this comment");
     }
@@ -216,13 +117,9 @@ export const likeCommentV1 = async (req, res) => {
   }
 };
 export const disLikeCommentV1 = async (req, res) => {
-  const clerkUserId = req.auth.userId;
-  if (!clerkUserId) return res.status(401).json("Not authenticated");
   try {
     const id = req.body.id;
-
-    const user = await User.findOne({ clerkUserId });
-    if (!user) return res.status(404).json("User not found");
+    const user = req.dbUser;
 
     if (!user.likeComments.includes(id)) {
       return res.status(400).json("You haven't liked this comment");
@@ -239,9 +136,5 @@ export const disLikeCommentV1 = async (req, res) => {
   }
 };
 export const likeCommentList = async (req, res) => {
-  const clerkUserId = req.auth.userId;
-
-  if (!clerkUserId) return res.status(401).json("Not authenticated");
-  const user = await User.findOne({ clerkUserId });
-  res.status(200).json(user.likeComments);
+  res.status(200).json(req.dbUser.likeComments);
 };

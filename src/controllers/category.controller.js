@@ -1,11 +1,7 @@
 import Category from "../models/category.model.js";
 
 export const createNewCategory = async (req, res) => {
-  const clerkUserId = req.auth.userId;
-  if (!clerkUserId) {
-    return res.status(401).json("Not authenticated");
-  }
-  const newCategory = new Category({ ...req.body });
+  const newCategory = new Category({ title: req.body.title });
   const category = await newCategory.save();
   res.status(201).json(category);
 };
@@ -38,27 +34,11 @@ export const getCategoriesBy = async (req, res) => {
   res.status(200).json({ categories, hasMore, totalPages });
 };
 export const deleteCategory = async (req, res) => {
-  const clerkUserId = req.auth.userId;
-  if (!clerkUserId) {
-    return res.status(401).json("Not authenticated");
-  }
-  const role = req.auth.sessionClaims?.metadata?.role || "user";
-  if (role !== "admin") {
-    return res.status(404).json("You do not have the right to delete!!");
-  }
   await Category.findByIdAndDelete(req.params.id);
-  return res.status(200).json("Delete post succesfully");
+  return res.status(200).json("Delete category succesfully");
 };
 export const changeStatus = async (req, res) => {
-  const clerkUserId = req.auth.userId;
   const categoryId = req.body.categoryId;
-  if (!clerkUserId) {
-    return res.status(401).json("Not authenticated");
-  }
-  const role = req.auth.sessionClaims?.metadata?.role || "user";
-  if (role !== "admin") {
-    return res.status(200).json("You cannot feature posts!");
-  }
   const category = await Category.findById(categoryId);
   if (!category) {
     return res.status(400).json("Category not found");

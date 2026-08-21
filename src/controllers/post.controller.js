@@ -4,6 +4,23 @@ import User from "../models/user.model.js";
 import ImageKit from "imagekit";
 import { io } from "../socket-server.js";
 
+const ALLOWED_POST_FIELDS = [
+  "title",
+  "content",
+  "desc",
+  "img",
+  "category",
+  "tags",
+  "publishedAt",
+];
+
+function pickAllowedFields(body, allowedFields) {
+  return allowedFields.reduce((acc, field) => {
+    if (body[field] !== undefined) acc[field] = body[field];
+    return acc;
+  }, {});
+}
+
 export const getPosts = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
@@ -79,34 +96,19 @@ export const sumAllPost = async (req, res) => {
   res.status(200).json({ totalPosts });
 };
 export const sumAllPostByUser = async (req, res) => {
-  const clerkUserId = req.auth.userId;
-  const role = req.auth.sessionClaims?.metadata?.role || "user";
-  if (!clerkUserId) {
-    return res.status(401).json("Not authenticated");
-  }
-  if (role === "admin") {
+  if (req.role === "admin") {
     const totalPosts = await Post.countDocuments({ isPublished: true });
-    res.status(200).json({ totalPosts });
-  } else {
-    const user = await User.findOne({ clerkUserId });
-    if (!user) {
-      return res.status(404).json("User not found!");
-    }
-    const posts = await Post.find({ user: user._id });
-    const totalVisits = posts.reduce((sum, post) => sum + (post.visit || 0), 0);
-    res.status(200).json({ totalVisits });
+    return res.status(200).json({ totalPosts });
   }
+  const posts = await Post.find({ user: req.dbUser._id });
+  const totalVisits = posts.reduce((sum, post) => sum + (post.visit || 0), 0);
+  res.status(200).json({ totalVisits });
 };
 
 export const getPostByUser = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 5;
-  const clerkUserId = req.auth.userId;
-  const role = req.auth.sessionClaims?.metadata?.role || "user";
-  if (!clerkUserId) {
-    return res.status(401).json("Not authenticated");
-  }
-  if (role === "admin") {
+  if (req.role === "admin") {
     const posts = await Post.find({ isPublished: true }).populate(
       "user",
       "username last_name first_name"
@@ -114,37 +116,27 @@ export const getPostByUser = async (req, res) => {
     const totalPosts = await Post.countDocuments();
     const hasMore = page * limit < totalPosts;
     const totalPages = Math.ceil(totalPosts / limit);
-    res.status(200).json({ posts, hasMore, totalPages, totalPosts });
-  } else {
-    const user = await User.findOne({ clerkUserId });
-    if (!user) {
-      return res.status(404).json("User not found!");
-    }
-    const posts = await Post.find({
-      user: user._id,
-      isPublished: true,
-    }).populate("user", "username last_name first_name");
-    const totalVisits = posts.reduce((sum, post) => sum + (post.visit || 0), 0);
-    const totalPosts = await Post.countDocuments({
-      user: user._id,
-      isPublished: true,
-    });
-    const hasMore = page * limit < totalPosts;
-    const totalPages = Math.ceil(totalPosts / limit);
-    res
-      .status(200)
-      .json({ posts, hasMore, totalPages, totalPosts, totalVisits });
+    return res.status(200).json({ posts, hasMore, totalPages, totalPosts });
   }
+  const posts = await Post.find({
+    user: req.dbUser._id,
+    isPublished: true,
+  }).populate("user", "username last_name first_name");
+  const totalVisits = posts.reduce((sum, post) => sum + (post.visit || 0), 0);
+  const totalPosts = await Post.countDocuments({
+    user: req.dbUser._id,
+    isPublished: true,
+  });
+  const hasMore = page * limit < totalPosts;
+  const totalPages = Math.ceil(totalPosts / limit);
+  res
+    .status(200)
+    .json({ posts, hasMore, totalPages, totalPosts, totalVisits });
 };
 export const getPostByUserSchedule = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 5;
-  const clerkUserId = req.auth.userId;
-  const role = req.auth.sessionClaims?.metadata?.role || "user";
-  if (!clerkUserId) {
-    return res.status(401).json("Not authenticated");
-  }
-  if (role === "admin") {
+  if (req.role === "admin") {
     const posts = await Post.find({ isPublished: false }).populate(
       "user",
       "username last_name first_name"
@@ -152,46 +144,33 @@ export const getPostByUserSchedule = async (req, res) => {
     const totalPosts = await Post.countDocuments();
     const hasMore = page * limit < totalPosts;
     const totalPages = Math.ceil(totalPosts / limit);
-    res.status(200).json({ posts, hasMore, totalPages, totalPosts });
-  } else {
-    const user = await User.findOne({ clerkUserId });
-    if (!user) {
-      return res.status(404).json("User not found!");
-    }
-    const posts = await Post.find({
-      user: user._id,
-      isPublished: false,
-    }).populate("user", "username last_name first_name");
-    const totalVisits = posts.reduce((sum, post) => sum + (post.visit || 0), 0);
-    const totalPosts = await Post.countDocuments({
-      user: user._id,
-      isPublished: false,
-    });
-    const hasMore = page * limit < totalPosts;
-    const totalPages = Math.ceil(totalPosts / limit);
-    res
-      .status(200)
-      .json({ posts, hasMore, totalPages, totalPosts, totalVisits });
+    return res.status(200).json({ posts, hasMore, totalPages, totalPosts });
   }
+  const posts = await Post.find({
+    user: req.dbUser._id,
+    isPublished: false,
+  }).populate("user", "username last_name first_name");
+  const totalVisits = posts.reduce((sum, post) => sum + (post.visit || 0), 0);
+  const totalPosts = await Post.countDocuments({
+    user: req.dbUser._id,
+    isPublished: false,
+  });
+  const hasMore = page * limit < totalPosts;
+  const totalPages = Math.ceil(totalPosts / limit);
+  res
+    .status(200)
+    .json({ posts, hasMore, totalPages, totalPosts, totalVisits });
 };
 export const getPostByUserId = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 5;
-  const clerkUserId = req.auth.userId;
-  if (!clerkUserId) {
-    return res.status(401).json("Not authenticated");
-  }
-  const user = await User.findOne({ clerkUserId });
-  if (!user) {
-    return res.status(404).json("User not found!");
-  }
   const posts = await Post.find({
     user: req.params.id,
     isPublished: true,
   }).populate("user", "username last_name first_name");
   const totalVisits = posts.reduce((sum, post) => sum + (post.visit || 0), 0);
   const totalPosts = await Post.countDocuments({
-    user: user._id,
+    user: req.params.id,
     isPublished: true,
   });
   const hasMore = page * limit < totalPosts;
@@ -213,14 +192,7 @@ export const getPost = async (req, res) => {
 };
 
 export const createNewPost = async (req, res) => {
-  const clerkUserId = req.auth.userId;
-  if (!clerkUserId) {
-    return res.status(401).json("Not authenticated");
-  }
-  const user = await User.findOne({ clerkUserId });
-  if (!user) {
-    return res.status(404).json("User not found!");
-  }
+  const user = req.dbUser;
   let slug = req.body.title.replace(/ /g, "-").toLowerCase();
   let existingPost = await Post.findOne({ slug });
   let counter = 2;
@@ -229,7 +201,11 @@ export const createNewPost = async (req, res) => {
     existingPost = await Post.findOne({ slug });
     counter++;
   }
-  const newPost = new Post({ user: user._id, slug, ...req.body });
+  const newPost = new Post({
+    user: user._id,
+    slug,
+    ...pickAllowedFields(req.body, ALLOWED_POST_FIELDS),
+  });
   const post = await newPost.save();
   const followers = await User.find({ follower: user._id });
   await Promise.all(
@@ -251,26 +227,24 @@ export const createNewPost = async (req, res) => {
   res.status(201).json(post);
 };
 export const updatePost = async (req, res) => {
-  const clerkUserId = req.auth.userId;
   const postId = req.params.id;
-  if (!clerkUserId) {
-    return res.status(401).json("Not authenticated");
-  }
-  const user = await User.findOne({ clerkUserId });
-  if (!user) {
-    return res.status(404).json("User not found!");
-  }
   try {
-    const updatedPost = await Post.findByIdAndUpdate(
-      postId,
-      {
-        ...(req.body || {}),
-      },
-      { new: true }
-    );
-    if (!updatedPost) {
+    const post = await Post.findById(postId);
+    if (!post) {
       return res.status(404).json("Post not found!");
     }
+    if (
+      req.role !== "admin" &&
+      post.user.toString() !== req.dbUser._id.toString()
+    ) {
+      return res.status(403).json("You can update only your post!");
+    }
+
+    const updatedPost = await Post.findByIdAndUpdate(
+      postId,
+      pickAllowedFields(req.body, ALLOWED_POST_FIELDS),
+      { new: true }
+    );
 
     res.status(200).json(updatedPost);
   } catch (error) {
@@ -278,23 +252,16 @@ export const updatePost = async (req, res) => {
   }
 };
 export const deletePost = async (req, res) => {
-  const clerkUserId = req.auth.userId;
-  if (!clerkUserId) {
-    return res.status(401).json("Not authenticated");
-  }
-  const role = req.auth.sessionClaims?.metadata?.role || "user";
-  if (role === "admin") {
-    await Post.findByIdAndDelete(req.params.id);
+  const postId = req.params.id;
+  if (req.role === "admin") {
+    await Post.findByIdAndDelete(postId);
     return res.status(200).json("Delete post succesfully");
   }
-  const user = await User.findOne({ clerkUserId });
-  const deletePost = await Post.findByIdAndDelete({
-    _id: req.params.id,
-    user: user._id,
-  });
-  if (!deletePost) {
-    res.status(403).json("You can delete only your post!");
+  const post = await Post.findOne({ _id: postId, user: req.dbUser._id });
+  if (!post) {
+    return res.status(403).json("You can delete only your post!");
   }
+  await Post.findByIdAndDelete(postId);
   res.status(200).json("Delete post succesfully");
 };
 const imagekit = new ImageKit({
@@ -310,15 +277,7 @@ export const uploadAuth = async (req, res) => {
   });
 };
 export const featurePost = async (req, res) => {
-  const clerkUserId = req.auth.userId;
   const postId = req.body.postId;
-  if (!clerkUserId) {
-    return res.status(401).json("Not authenticated");
-  }
-  const role = req.auth.sessionClaims?.metadata?.role || "user";
-  if (role !== "admin") {
-    return res.status(200).json("You cannot feature posts!");
-  }
   const post = await Post.findById(postId);
   if (!post) {
     return res.status(400).json("Post not found");
@@ -337,14 +296,6 @@ export const featurePost = async (req, res) => {
 };
 export const statistic = async (req, res) => {
   const totalPosts = await Post.countDocuments({ isPublished: true });
-  const clerkUserId = req.auth.userId;
-  const role = req.auth.sessionClaims?.metadata?.role || "user";
-  if (!clerkUserId) {
-    return res.status(401).json("Not authenticated");
-  }
-  if (role !== "admin") {
-    return res.status(404).json("You do not have statistic!!");
-  }
 
   const postsByMonth = await Post.aggregate([
     {

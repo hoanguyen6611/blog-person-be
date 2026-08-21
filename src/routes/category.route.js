@@ -7,13 +7,19 @@ import {
   getCategories,
   getCategoriesBy,
 } from "../controllers/category.controller.js";
+import { requireAuth, requireAdmin } from "../middlewares/auth.js";
 const categoryRouter = express.Router();
 
-categoryRouter.post("/", createNewCategory);
+categoryRouter.post("/", requireAuth, createNewCategory);
 categoryRouter.get("/", getCategories);
 categoryRouter.get("/all", getAllCategories);
 categoryRouter.get("/getLimit", getCategoriesBy);
-categoryRouter.delete("/:id", deleteCategory);
-categoryRouter.patch("/changeStatus/:id", changeStatus);
+categoryRouter.delete("/:id", requireAuth, requireAdmin, deleteCategory);
+categoryRouter.patch(
+  "/changeStatus/:id",
+  requireAuth,
+  requireAdmin,
+  changeStatus
+);
 
 export default categoryRouter;

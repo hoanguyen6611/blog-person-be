@@ -17,6 +17,7 @@ import {
   getPostByUserSchedule,
 } from "../controllers/post.controller.js";
 import increaseVisit from "../middlewares/increaseVisit.js";
+import { requireAuth, requireAdmin } from "../middlewares/auth.js";
 
 const postRouter = express.Router();
 
@@ -77,17 +78,17 @@ postRouter.get("/", getPosts);
  */
 postRouter.get("/upload-auth", uploadAuth);
 postRouter.get("/sumPost", sumAllPost);
-postRouter.get("/sumPostUser", sumAllPostByUser);
+postRouter.get("/sumPostUser", requireAuth, sumAllPostByUser);
 postRouter.get("/sumVisit", getSumVisitPost);
-postRouter.get("/user", getPostByUser);
-postRouter.get("/user/schedule", getPostByUserSchedule);
-postRouter.get("/user/:id", getPostByUserId);
-postRouter.get("/statistic", statistic);
+postRouter.get("/user", requireAuth, getPostByUser);
+postRouter.get("/user/schedule", requireAuth, getPostByUserSchedule);
+postRouter.get("/user/:id", requireAuth, getPostByUserId);
+postRouter.get("/statistic", requireAuth, requireAdmin, statistic);
 postRouter.get("/:id", increaseVisit, getPost);
 postRouter.get("/related/:id", relatedPosts);
-postRouter.post("/", createNewPost);
-postRouter.delete("/:id", deletePost);
-postRouter.patch("/feature", featurePost);
-postRouter.put("/:id", updatePost);
+postRouter.post("/", requireAuth, createNewPost);
+postRouter.delete("/:id", requireAuth, deletePost);
+postRouter.patch("/feature", requireAuth, requireAdmin, featurePost);
+postRouter.put("/:id", requireAuth, updatePost);
 
 export default postRouter;

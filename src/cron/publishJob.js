@@ -6,7 +6,7 @@ cron.schedule("* * * * *", async () => {
   const now = new Date();
   const posts = await Post.find({
     isPublished: false,
-    publishedAt: { $lte: now },
+    publishedAt: { $ne: null, $lte: now },
   });
 
   for (const post of posts) {

@@ -6,8 +6,11 @@ import {
   likeCommentV1,
   disLikeCommentV1,
   likeCommentList,
+  getPendingComments,
+  approveComment,
+  hideComment,
 } from "../controllers/comment.controller.js";
-import { requireAuth } from "../middlewares/auth.js";
+import { requireAuth, requireAdmin } from "../middlewares/auth.js";
 const commentRouter = express.Router();
 
 /**
@@ -27,14 +30,42 @@ const commentRouter = express.Router();
  *           nullable: true
  *           description: ID comment cha (nếu là reply)
  *         like: { type: integer }
+ *         status:
+ *           type: string
+ *           enum: [pending, approved, hidden]
+ *           description: Mặc định approved (hiện ngay). Admin có thể ẩn (hidden) hoặc chuyển lại pending để rà soát.
  *         createdAt: { type: string, format: date-time }
  */
 
 /**
  * @swagger
+ * /comments/pending:
+ *   get:
+ *     summary: Lấy danh sách comment đang chờ duyệt (chỉ admin)
+ *     tags: [Comments]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 10 }
+ *     responses:
+ *       200:
+ *         description: Thành công
+ *       401:
+ *         description: Chưa đăng nhập
+ *       403:
+ *         description: Không có quyền admin
+ */
+commentRouter.get("/pending", requireAuth, requireAdmin, getPendingComments);
+
+/**
+ * @swagger
  * /comments/{postId}:
  *   get:
- *     summary: Lấy toàn bộ comment của một bài viết (dạng cây, đã sort theo replies)
+ *     summary: Lấy toàn bộ comment đã duyệt của một bài viết (dạng cây, đã sort theo replies)
  *     tags: [Comments]
  *     parameters:
  *       - in: path
@@ -173,5 +204,59 @@ commentRouter.patch("/disLike", requireAuth, disLikeCommentV1);
  *         description: Chưa đăng nhập
  */
 commentRouter.patch("/likeCommentList", requireAuth, likeCommentList);
+
+/**
+ * @swagger
+ * /comments/{id}/approve:
+ *   patch:
+ *     summary: Duyệt một comment (chỉ admin)
+ *     tags: [Comments]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Thành công
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Comment' }
+ *       401:
+ *         description: Chưa đăng nhập
+ *       403:
+ *         description: Không có quyền admin
+ *       404:
+ *         description: Không tìm thấy comment
+ */
+commentRouter.patch("/:id/approve", requireAuth, requireAdmin, approveComment);
+
+/**
+ * @swagger
+ * /comments/{id}/hide:
+ *   patch:
+ *     summary: Ẩn một comment (chỉ admin)
+ *     tags: [Comments]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Thành công
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Comment' }
+ *       401:
+ *         description: Chưa đăng nhập
+ *       403:
+ *         description: Không có quyền admin
+ *       404:
+ *         description: Không tìm thấy comment
+ */
+commentRouter.patch("/:id/hide", requireAuth, requireAdmin, hideComment);
 
 export default commentRouter;

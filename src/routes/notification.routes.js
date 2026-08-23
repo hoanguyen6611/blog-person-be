@@ -51,17 +51,30 @@ notificationRouter.get("/", requireAuth, getNotificationsByUserLimit);
  * @swagger
  * /notifications/all:
  *   get:
- *     summary: Lấy toàn bộ thông báo của chính mình
+ *     summary: Lấy toàn bộ thông báo của chính mình (phân trang)
  *     tags: [Notifications]
  *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 20 }
  *     responses:
  *       200:
  *         description: Thành công
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items: { $ref: '#/components/schemas/Notification' }
+ *               type: object
+ *               properties:
+ *                 notifications:
+ *                   type: array
+ *                   items: { $ref: '#/components/schemas/Notification' }
+ *                 hasMore: { type: boolean }
+ *                 totalPages: { type: integer }
+ *                 totalNotifications: { type: integer }
  *       401:
  *         description: Chưa đăng nhập
  */

@@ -45,7 +45,8 @@ const postSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    publishedAt: { type: Date, default: Date.now }, // Ngày giờ publish
+    // null = bài nháp (draft), chưa hẹn giờ đăng. Có giá trị = đã lên lịch, cron sẽ tự publish khi tới giờ.
+    publishedAt: { type: Date, default: null },
     isPublished: { type: Boolean, default: false }, // Đã đăng chưa
   },
   { timestamps: true }

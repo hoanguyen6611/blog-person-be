@@ -35,6 +35,7 @@ export const getCommentByPost = async (req, res) => {
   // const hasMore = page * limit < totalComments;
   const comments = await Comment.find({
     post: req.params.postId,
+    status: "approved",
   })
     .populate("user", "username img")
     .sort({ createdAt: 1 })
@@ -137,4 +138,40 @@ export const disLikeCommentV1 = async (req, res) => {
 };
 export const likeCommentList = async (req, res) => {
   res.status(200).json(req.dbUser.likeComments);
+};
+
+export const getPendingComments = async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const filter = { status: "pending" };
+  const comments = await Comment.find(filter)
+    .populate("user", "username img")
+    .populate("post", "title slug")
+    .sort({ createdAt: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit);
+  const totalComments = await Comment.countDocuments(filter);
+  const hasMore = page * limit < totalComments;
+  const totalPages = Math.ceil(totalComments / limit);
+  res.status(200).json({ comments, hasMore, totalPages, totalComments });
+};
+
+export const approveComment = async (req, res) => {
+  const comment = await Comment.findByIdAndUpdate(
+    req.params.id,
+    { status: "approved" },
+    { new: true }
+  );
+  if (!comment) return res.status(404).json("Comment not found");
+  res.status(200).json(comment);
+};
+
+export const hideComment = async (req, res) => {
+  const comment = await Comment.findByIdAndUpdate(
+    req.params.id,
+    { status: "hidden" },
+    { new: true }
+  );
+  if (!comment) return res.status(404).json("Comment not found");
+  res.status(200).json(comment);
 };

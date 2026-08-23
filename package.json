@@ -1,9 +1,9 @@
 {
   "name": "blog-person",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "node src/index.js",
     "dev": "node --env-file .env --watch src/index.js"
   },
   "license": "MIT",
@@ -12,6 +12,7 @@
     "@clerk/clerk-sdk-node": "^5.1.6",
     "@clerk/express": "^1.7.2",
     "body-parser": "^2.2.0",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",

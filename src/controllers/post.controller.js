@@ -1,6 +1,8 @@
+import mongoose from "mongoose";
 import notificationModel from "../models/notification.model.js";
 import Post from "../models/post.model.js";
 import User from "../models/user.model.js";
+import PostView from "../models/postView.model.js";
 import ImageKit from "imagekit";
 import { io } from "../socket-server.js";
 
@@ -13,6 +15,9 @@ const ALLOWED_POST_FIELDS = [
   "tags",
   "publishedAt",
 ];
+// Chỉ cho phép set isPublished khi TẠO bài (chủ bài viết tự chọn đăng ngay hay lưu nháp).
+// Khi UPDATE, isPublished phải đi qua endpoint publish-status riêng để tránh bypass ngầm qua body.
+const CREATE_ONLY_FIELDS = [...ALLOWED_POST_FIELDS, "isPublished"];
 
 function pickAllowedFields(body, allowedFields) {
   return allowedFields.reduce((acc, field) => {
@@ -136,30 +141,55 @@ export const getPostByUser = async (req, res) => {
 export const getPostByUserSchedule = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 5;
+  // Chỉ tính bài "đã lên lịch" (có publishedAt), khác với bài nháp (publishedAt = null).
+  const scheduleFilter = { isPublished: false, publishedAt: { $ne: null } };
+  if (req.query.from || req.query.to) {
+    scheduleFilter.publishedAt = {
+      ...scheduleFilter.publishedAt,
+      ...(req.query.from && { $gte: new Date(req.query.from) }),
+      ...(req.query.to && { $lte: new Date(req.query.to) }),
+    };
+  }
   if (req.role === "admin") {
-    const posts = await Post.find({ isPublished: false }).populate(
+    const posts = await Post.find(scheduleFilter).populate(
       "user",
       "username last_name first_name"
     );
-    const totalPosts = await Post.countDocuments();
+    const totalPosts = await Post.countDocuments(scheduleFilter);
     const hasMore = page * limit < totalPosts;
     const totalPages = Math.ceil(totalPosts / limit);
     return res.status(200).json({ posts, hasMore, totalPages, totalPosts });
   }
-  const posts = await Post.find({
-    user: req.dbUser._id,
-    isPublished: false,
-  }).populate("user", "username last_name first_name");
+  const filter = { ...scheduleFilter, user: req.dbUser._id };
+  const posts = await Post.find(filter).populate(
+    "user",
+    "username last_name first_name"
+  );
   const totalVisits = posts.reduce((sum, post) => sum + (post.visit || 0), 0);
-  const totalPosts = await Post.countDocuments({
-    user: req.dbUser._id,
-    isPublished: false,
-  });
+  const totalPosts = await Post.countDocuments(filter);
   const hasMore = page * limit < totalPosts;
   const totalPages = Math.ceil(totalPosts / limit);
   res
     .status(200)
     .json({ posts, hasMore, totalPages, totalPosts, totalVisits });
+};
+export const getUserDraftPosts = async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 5;
+  // Bài nháp thật sự: chưa publish và chưa hẹn giờ đăng.
+  const draftFilter = { isPublished: false, publishedAt: null };
+  if (req.role !== "admin") {
+    draftFilter.user = req.dbUser._id;
+  }
+  const posts = await Post.find(draftFilter)
+    .populate("user", "username last_name first_name")
+    .sort({ updatedAt: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit);
+  const totalPosts = await Post.countDocuments(draftFilter);
+  const hasMore = page * limit < totalPosts;
+  const totalPages = Math.ceil(totalPosts / limit);
+  res.status(200).json({ posts, hasMore, totalPages, totalPosts });
 };
 export const getPostByUserId = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -201,10 +231,14 @@ export const createNewPost = async (req, res) => {
     existingPost = await Post.findOne({ slug });
     counter++;
   }
+  const fields = pickAllowedFields(req.body, CREATE_ONLY_FIELDS);
+  if (fields.isPublished && !fields.publishedAt) {
+    fields.publishedAt = new Date();
+  }
   const newPost = new Post({
     user: user._id,
     slug,
-    ...pickAllowedFields(req.body, ALLOWED_POST_FIELDS),
+    ...fields,
   });
   const post = await newPost.save();
   const followers = await User.find({ follower: user._id });
@@ -233,10 +267,7 @@ export const updatePost = async (req, res) => {
     if (!post) {
       return res.status(404).json("Post not found!");
     }
-    if (
-      req.role !== "admin" &&
-      post.user.toString() !== req.dbUser._id.toString()
-    ) {
+    if (!assertOwnerOrAdmin(post, req)) {
       return res.status(403).json("You can update only your post!");
     }
 
@@ -251,6 +282,51 @@ export const updatePost = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+function assertOwnerOrAdmin(post, req) {
+  return req.role === "admin" || post.user.toString() === req.dbUser._id.toString();
+}
+
+export const setPostPublishStatus = async (req, res) => {
+  const postId = req.params.id;
+  const isPublished = !!req.body.isPublished;
+  const post = await Post.findById(postId);
+  if (!post) {
+    return res.status(404).json("Post not found!");
+  }
+  if (!assertOwnerOrAdmin(post, req)) {
+    return res.status(403).json("You can update only your post!");
+  }
+  const update = { isPublished };
+  if (isPublished && !post.publishedAt) {
+    update.publishedAt = new Date();
+  }
+  const updatedPost = await Post.findByIdAndUpdate(postId, update, {
+    new: true,
+  });
+  res.status(200).json(updatedPost);
+};
+
+export const schedulePost = async (req, res) => {
+  const postId = req.params.id;
+  const { publishedAt } = req.body;
+  if (!publishedAt) {
+    return res.status(400).json("publishedAt is required");
+  }
+  const post = await Post.findById(postId);
+  if (!post) {
+    return res.status(404).json("Post not found!");
+  }
+  if (!assertOwnerOrAdmin(post, req)) {
+    return res.status(403).json("You can update only your post!");
+  }
+  const updatedPost = await Post.findByIdAndUpdate(
+    postId,
+    { publishedAt: new Date(publishedAt) },
+    { new: true }
+  );
+  res.status(200).json(updatedPost);
+};
+
 export const deletePost = async (req, res) => {
   const postId = req.params.id;
   if (req.role === "admin") {
@@ -264,15 +340,81 @@ export const deletePost = async (req, res) => {
   await Post.findByIdAndDelete(postId);
   res.status(200).json("Delete post succesfully");
 };
-const imagekit = new ImageKit({
-  publicKey: "public_WYltmmJOZFWTLK9IloWulX5d22Q=",
-  privateKey: "private_9Q2tvWScSgJG6Ou6Rne6GQN4slY=",
-  urlEndpoint: "https://ik.imagekit.io/cjx1zgaos",
-});
+
+function parsePostIds(body) {
+  const ids = Array.isArray(body.postIds) ? body.postIds : [];
+  return ids.filter((id) => mongoose.Types.ObjectId.isValid(id));
+}
+
+export const bulkChangeCategory = async (req, res) => {
+  const postIds = parsePostIds(req.body);
+  const category = req.body.category;
+  if (!postIds.length || !category) {
+    return res.status(400).json("postIds and category are required");
+  }
+  const result = await Post.updateMany(
+    { _id: { $in: postIds } },
+    { category }
+  );
+  res.status(200).json({ matched: result.matchedCount, modified: result.modifiedCount });
+};
+
+export const bulkAddTags = async (req, res) => {
+  const postIds = parsePostIds(req.body);
+  const tags = Array.isArray(req.body.tags) ? req.body.tags : [];
+  if (!postIds.length || !tags.length) {
+    return res.status(400).json("postIds and tags are required");
+  }
+  const result = await Post.updateMany(
+    { _id: { $in: postIds } },
+    { $addToSet: { tags: { $each: tags } } }
+  );
+  res.status(200).json({ matched: result.matchedCount, modified: result.modifiedCount });
+};
+
+export const bulkSetPublishStatus = async (req, res) => {
+  const postIds = parsePostIds(req.body);
+  const isPublished = !!req.body.isPublished;
+  if (!postIds.length) {
+    return res.status(400).json("postIds is required");
+  }
+  const update = { isPublished };
+  if (isPublished) {
+    // Chỉ set publishedAt cho bài chưa có, không ghi đè lịch đã hẹn.
+    await Post.updateMany(
+      { _id: { $in: postIds }, publishedAt: null },
+      { publishedAt: new Date() }
+    );
+  }
+  const result = await Post.updateMany({ _id: { $in: postIds } }, update);
+  res.status(200).json({ matched: result.matchedCount, modified: result.modifiedCount });
+};
+
+export const bulkDeletePosts = async (req, res) => {
+  const postIds = parsePostIds(req.body);
+  if (!postIds.length) {
+    return res.status(400).json("postIds is required");
+  }
+  const result = await Post.deleteMany({ _id: { $in: postIds } });
+  res.status(200).json({ deleted: result.deletedCount });
+};
+
+let imagekit;
+function getImageKit() {
+  if (!imagekit) {
+    imagekit = new ImageKit({
+      publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
+      privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
+      urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
+    });
+  }
+  return imagekit;
+}
 export const uploadAuth = async (req, res) => {
-  const result = imagekit.getAuthenticationParameters();
+  const ik = getImageKit();
+  const result = ik.getAuthenticationParameters();
   res.send({
-    publicKey: imagekit.options.publicKey,
+    publicKey: ik.options.publicKey,
     ...result,
   });
 };
@@ -360,6 +502,65 @@ export const statistic = async (req, res) => {
     monthlyVisit,
   });
 };
+
+export const getTrafficStats = async (req, res) => {
+  const days = parseInt(req.query.days) || 30;
+  const now = new Date();
+  const periodStart = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+  const prevPeriodStart = new Date(
+    periodStart.getTime() - days * 24 * 60 * 60 * 1000
+  );
+
+  const [totalViews, previousPeriodViews, dailyViewsRaw, uniqueVisitorIds] =
+    await Promise.all([
+      PostView.countDocuments({ createdAt: { $gte: periodStart, $lte: now } }),
+      PostView.countDocuments({
+        createdAt: { $gte: prevPeriodStart, $lt: periodStart },
+      }),
+      PostView.aggregate([
+        { $match: { createdAt: { $gte: periodStart, $lte: now } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+      PostView.distinct("visitorId", {
+        createdAt: { $gte: periodStart, $lte: now },
+      }),
+    ]);
+
+  const returningVisitorIds = await PostView.distinct("visitorId", {
+    visitorId: { $in: uniqueVisitorIds },
+    createdAt: { $lt: periodStart },
+  });
+
+  const trendPercent =
+    previousPeriodViews === 0
+      ? totalViews > 0
+        ? 100
+        : 0
+      : Math.round(((totalViews - previousPeriodViews) / previousPeriodViews) * 1000) / 10;
+
+  const returningRatePercent =
+    uniqueVisitorIds.length === 0
+      ? 0
+      : Math.round((returningVisitorIds.length / uniqueVisitorIds.length) * 1000) / 10;
+
+  res.status(200).json({
+    period: { days, from: periodStart, to: now },
+    totalViews,
+    previousPeriodViews,
+    trendPercent,
+    uniqueVisitors: uniqueVisitorIds.length,
+    returningVisitors: returningVisitorIds.length,
+    returningRatePercent,
+    dailyViews: dailyViewsRaw.map((d) => ({ date: d._id, count: d.count })),
+  });
+};
+
 export const relatedPosts = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id).lean();

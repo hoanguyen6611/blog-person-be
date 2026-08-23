@@ -10,11 +10,19 @@ export const getNotificationsByUserLimit = async (req, res) => {
   res.json(notifications);
 };
 export const getNotificationsByUser = async (req, res) => {
-  const notifications = await Notification.find({
-    recipientId: req.dbUser._id,
-  }).sort({ createdAt: -1 });
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  const filter = { recipientId: req.dbUser._id };
 
-  res.json(notifications);
+  const notifications = await Notification.find(filter)
+    .sort({ createdAt: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit);
+  const totalNotifications = await Notification.countDocuments(filter);
+  const hasMore = page * limit < totalNotifications;
+  const totalPages = Math.ceil(totalNotifications / limit);
+
+  res.json({ notifications, hasMore, totalPages, totalNotifications });
 };
 export const markNotificationAsRead = async (req, res) => {
   const notificationId = req.params.id;

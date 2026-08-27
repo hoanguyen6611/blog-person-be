@@ -1,5 +1,5 @@
 import { Server } from "socket.io";
-import { verifyToken } from "@clerk/clerk-sdk-node"; // Dùng để xác thực Clerk JWT
+import { verifyToken } from "@clerk/express"; // Dùng để xác thực Clerk JWT
 
 export let io;
 

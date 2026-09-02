@@ -28,11 +28,13 @@ function pickAllowedFields(body, allowedFields) {
 
 export const getPosts = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
+  const limit = parseInt(req.query.limit) || 12;
   const query = {
     isPublished: true,
   };
   const cat = req.query.cat;
+  const tag = req.query.tag;
+  const tagsParam = req.query.tags;
   const author = req.query.author;
   const searchQuery = req.query.search;
   const sortQuery = req.query.sort;
@@ -47,6 +49,16 @@ export const getPosts = async (req, res) => {
   }
   if (cat) {
     query.category = cat;
+  }
+  if (tagsParam) {
+    // Lọc bài chứa BẤT KỲ tag nào trong danh sách (OR).
+    const tagIds = tagsParam
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    if (tagIds.length) query.tags = { $in: tagIds };
+  } else if (tag) {
+    query.tags = tag;
   }
   if (searchQuery) {
     query.title = { $regex: searchQuery, $options: "i" };

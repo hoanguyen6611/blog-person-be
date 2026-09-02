@@ -18,6 +18,9 @@ const tagRouter = express.Router();
  *         _id: { type: string }
  *         name: { type: string }
  *         slug: { type: string }
+ *         postCount:
+ *           type: integer
+ *           description: Số bài viết đã publish đang gắn tag này
  *         createdAt: { type: string, format: date-time }
  */
 

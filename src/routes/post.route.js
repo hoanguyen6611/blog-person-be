@@ -114,11 +114,19 @@ const postRouter = express.Router();
  *         schema: { type: integer, default: 1 }
  *       - in: query
  *         name: limit
- *         schema: { type: integer, default: 10 }
+ *         schema: { type: integer, default: 12 }
  *       - in: query
  *         name: cat
  *         schema: { type: string }
  *         description: ID chuyên mục để lọc
+ *       - in: query
+ *         name: tag
+ *         schema: { type: string }
+ *         description: ID tag để lọc (bài viết chứa tag này trong mảng tags)
+ *       - in: query
+ *         name: tags
+ *         schema: { type: string }
+ *         description: Danh sách ID tag cách nhau bởi dấu phẩy (vd. id1,id2) - lọc bài chứa BẤT KỲ tag nào trong danh sách (OR). Ưu tiên hơn "tag" nếu cả 2 cùng được truyền.
  *       - in: query
  *         name: author
  *         schema: { type: string }

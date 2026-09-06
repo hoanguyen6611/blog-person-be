@@ -2,6 +2,7 @@ import Comment from "../models/comment.model.js";
 import Post from "../models/post.model.js";
 import Notification from "../models/notification.model.js";
 import { io } from "../socket-server.js";
+import { sendPushToUser } from "../utils/sendPushNotification.js";
 
 function buildCommentTree(flatComments) {
   const map = {};
@@ -68,6 +69,11 @@ export const createNewComment = async (req, res) => {
     postId: req.body.post,
     message: `🗨️ Ai đó vừa bình luận bài "${post.title}"`,
   });
+  await sendPushToUser(post.user._id, {
+    title: "Bình luận mới",
+    body: `${user.username} bình luận bài viết "${post.title}"`,
+    url: `/posts/${post.slug}`,
+  });
 
   res.status(201).json({ comment });
 };
@@ -110,6 +116,11 @@ export const likeCommentV1 = async (req, res) => {
       type: "like",
       postId: commentOther.post._id,
       message: `🗨️ Ai đó vừa like comment "${comment.desc}" ở bài "${commentOther.post.title}"`,
+    });
+    await sendPushToUser(comment.user._id, {
+      title: "Lượt thích mới",
+      body: `${user.username} vừa thích bình luận "${comment.desc}" của bạn`,
+      url: `/posts/${commentOther.post.slug}`,
     });
     res.status(200).json("Liked comment successfully");
   } catch (err) {

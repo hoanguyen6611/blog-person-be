@@ -8,8 +8,44 @@ export const createNewCategory = async (req, res) => {
 export const getCategories = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 5;
-  const categories = await Category.find({ status: true });
-  const totalCategories = await Category.countDocuments();
+  const filter = { status: true };
+
+  const [categories, totalCategories] = await Promise.all([
+    Category.aggregate([
+      { $match: filter },
+      { $skip: (page - 1) * limit },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "posts",
+          let: { categoryId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$category", "$$categoryId"] },
+                    { $eq: ["$isPublished", true] },
+                  ],
+                },
+              },
+            },
+            { $count: "count" },
+          ],
+          as: "postCountResult",
+        },
+      },
+      {
+        $addFields: {
+          postCount: {
+            $ifNull: [{ $arrayElemAt: ["$postCountResult.count", 0] }, 0],
+          },
+        },
+      },
+      { $project: { postCountResult: 0 } },
+    ]),
+    Category.countDocuments(filter),
+  ]);
   const hasMore = page * limit < totalCategories;
   const totalPages = Math.ceil(totalCategories / limit);
   res.status(200).json({ categories, hasMore, totalPages, totalCategories });

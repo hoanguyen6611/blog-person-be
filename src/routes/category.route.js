@@ -23,6 +23,9 @@ const categoryRouter = express.Router();
  *         status:
  *           type: boolean
  *           description: Hiển thị hay không (mặc định true)
+ *         postCount:
+ *           type: integer
+ *           description: Số bài viết đã publish thuộc chuyên mục này (chỉ có ở GET /category)
  *         createdAt: { type: string, format: date-time }
  *     CategoryListResponse:
  *       type: object

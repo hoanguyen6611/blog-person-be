@@ -4,6 +4,8 @@ import {
   getNotificationsByUserLimit,
   markAllAsRead,
   markNotificationAsRead,
+  subscribePush,
+  unsubscribePush,
 } from "../controllers/notification.controller.js";
 import { requireAuth } from "../middlewares/auth.js";
 const notificationRouter = express.Router();
@@ -119,5 +121,64 @@ notificationRouter.patch("/:id/read", requireAuth, markNotificationAsRead);
  *         description: Chưa đăng nhập
  */
 notificationRouter.patch("/readAll", requireAuth, markAllAsRead);
+
+/**
+ * @swagger
+ * /notifications/push-subscribe:
+ *   post:
+ *     summary: Lưu push subscription (Web Push) của trình duyệt hiện tại theo user đăng nhập
+ *     tags: [Notifications]
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       required: true
+ *       description: Gửi nguyên object trả về từ PushSubscription.toJSON() phía FE
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [endpoint, keys]
+ *             properties:
+ *               endpoint: { type: string }
+ *               keys:
+ *                 type: object
+ *                 required: [p256dh, auth]
+ *                 properties:
+ *                   p256dh: { type: string }
+ *                   auth: { type: string }
+ *     responses:
+ *       200:
+ *         description: Thành công
+ *       400:
+ *         description: Thiếu endpoint hoặc keys
+ *       401:
+ *         description: Chưa đăng nhập
+ */
+notificationRouter.post("/push-subscribe", requireAuth, subscribePush);
+
+/**
+ * @swagger
+ * /notifications/push-unsubscribe:
+ *   post:
+ *     summary: Xoá push subscription theo endpoint (khi user tắt thông báo đẩy)
+ *     tags: [Notifications]
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [endpoint]
+ *             properties:
+ *               endpoint: { type: string }
+ *     responses:
+ *       200:
+ *         description: Thành công
+ *       400:
+ *         description: Thiếu endpoint
+ *       401:
+ *         description: Chưa đăng nhập
+ */
+notificationRouter.post("/push-unsubscribe", requireAuth, unsubscribePush);
 
 export default notificationRouter;

@@ -5,6 +5,7 @@ import User from "../models/user.model.js";
 import PostView from "../models/postView.model.js";
 import ImageKit from "imagekit";
 import { io } from "../socket-server.js";
+import { sendPushToUser } from "../utils/sendPushNotification.js";
 
 const ALLOWED_POST_FIELDS = [
   "title",
@@ -267,6 +268,11 @@ export const createNewPost = async (req, res) => {
         type: "post",
         postId: post._id,
         message: `📝 ${user.username} vừa đăng bài viết mới "${post.title}"`,
+      });
+      await sendPushToUser(follower._id, {
+        title: "Bài viết mới",
+        body: `${user.username} vừa đăng bài viết mới "${post.title}"`,
+        url: `/posts/${post.slug}`,
       });
     })
   );

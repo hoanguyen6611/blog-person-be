@@ -3,6 +3,7 @@ import Post from "../models/post.model.js";
 import User from "../models/user.model.js";
 import { io } from "../socket-server.js";
 import mongoose from "mongoose";
+import { sendPushToUser } from "../utils/sendPushNotification.js";
 
 export const savedPost = async (req, res) => {
   const user = req.dbUser;
@@ -43,6 +44,11 @@ export const followerAuthor = async (req, res) => {
     io.to(userFollow.clerkUserId).emit("new-follow", {
       type: "follow",
       message: `🗨️ ${user.username} vừa theo dõi bạn`,
+    });
+    await sendPushToUser(userFollow._id, {
+      title: "Người theo dõi mới",
+      body: `${user.username} vừa theo dõi bạn`,
+      url: `/profile/${user.username}`,
     });
   } else {
     await User.findByIdAndUpdate(user._id, {

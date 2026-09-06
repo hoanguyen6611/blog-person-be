@@ -1,4 +1,5 @@
 import Notification from "../models/notification.model.js";
+import PushSubscription from "../models/pushSubscription.model.js";
 
 export const getNotificationsByUserLimit = async (req, res) => {
   const notifications = await Notification.find({
@@ -47,4 +48,32 @@ export const markAllAsRead = async (req, res) => {
   );
 
   res.status(200).json({ message: "All notifications marked as read" });
+};
+
+export const subscribePush = async (req, res) => {
+  const { endpoint, keys } = req.body;
+  if (!endpoint || !keys?.p256dh || !keys?.auth) {
+    return res
+      .status(400)
+      .json("endpoint và keys.p256dh/keys.auth là bắt buộc");
+  }
+  await PushSubscription.findOneAndUpdate(
+    { endpoint },
+    {
+      user: req.dbUser._id,
+      endpoint,
+      keys: { p256dh: keys.p256dh, auth: keys.auth },
+    },
+    { upsert: true, setDefaultsOnInsert: true }
+  );
+  res.status(200).json({ message: "Subscribed" });
+};
+
+export const unsubscribePush = async (req, res) => {
+  const { endpoint } = req.body;
+  if (!endpoint) {
+    return res.status(400).json("endpoint là bắt buộc");
+  }
+  await PushSubscription.deleteOne({ endpoint });
+  res.status(200).json({ message: "Unsubscribed" });
 };

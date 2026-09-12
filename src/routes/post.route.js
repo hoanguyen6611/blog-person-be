@@ -84,6 +84,15 @@ const postRouter = express.Router();
  *         visit:
  *           type: number
  *           description: Số lượt xem
+ *         videoUrl:
+ *           type: string
+ *           description: URL video nếu bài viết dạng video, rỗng nếu là bài thường
+ *         videoDuration:
+ *           type: number
+ *           description: Thời lượng video (giây)
+ *         commentCount:
+ *           type: integer
+ *           description: Số bình luận đã duyệt (chỉ có ở GET /posts danh sách)
  *         createdAt:
  *           type: string
  *           format: date-time
@@ -141,6 +150,10 @@ const postRouter = express.Router();
  *       - in: query
  *         name: featured
  *         schema: { type: boolean }
+ *       - in: query
+ *         name: hasVideo
+ *         schema: { type: string, enum: ["true", "false"] }
+ *         description: "true = chỉ lấy bài dạng video (có videoUrl), false = chỉ lấy bài thường"
  *       - in: query
  *         name: from
  *         schema: { type: string, format: date-time }
@@ -472,6 +485,12 @@ postRouter.get("/related/:id", relatedPosts);
  *               isPublished:
  *                 type: boolean
  *                 description: true = đăng ngay lập tức (tự set publishedAt = hiện tại nếu chưa có)
+ *               videoUrl:
+ *                 type: string
+ *                 description: Có giá trị = bài viết dạng video
+ *               videoDuration:
+ *                 type: number
+ *                 description: Thời lượng video (giây)
  *     responses:
  *       201:
  *         description: Tạo thành công
@@ -805,6 +824,8 @@ postRouter.patch("/:id/schedule", requireAuth, schedulePost);
  *                 type: array
  *                 items: { type: string }
  *               publishedAt: { type: string, format: date-time }
+ *               videoUrl: { type: string }
+ *               videoDuration: { type: number }
  *     responses:
  *       200:
  *         description: Cập nhật thành công

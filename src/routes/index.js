@@ -8,6 +8,7 @@ import notificationRouter from "./notification.routes.js";
 import webHookRouter from "./webhook.route.js";
 import socialRouter from "./social.route.js";
 import siteSettingRouter from "./siteSetting.route.js";
+import newsletterRouter from "./newsletter.route.js";
 const router = express.Router();
 
 router.use("/webhooks", webHookRouter);
@@ -19,5 +20,6 @@ router.use("/category", categoryRouter);
 router.use("/notifications", notificationRouter);
 router.use("/social", socialRouter);
 router.use("/settings", siteSettingRouter);
+router.use("/newsletter", newsletterRouter);
 
 export default router;

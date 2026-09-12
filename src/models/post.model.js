@@ -37,6 +37,14 @@ const postSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    videoUrl: {
+      type: String,
+      default: "",
+    },
+    videoDuration: {
+      type: Number, // giây
+      default: 0,
+    },
     isFeature: {
       type: Boolean,
       default: false,

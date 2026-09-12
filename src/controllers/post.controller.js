@@ -3,6 +3,7 @@ import notificationModel from "../models/notification.model.js";
 import Post from "../models/post.model.js";
 import User from "../models/user.model.js";
 import PostView from "../models/postView.model.js";
+import Comment from "../models/comment.model.js";
 import ImageKit from "imagekit";
 import { io } from "../socket-server.js";
 import { sendPushToUser } from "../utils/sendPushNotification.js";
@@ -15,6 +16,8 @@ const ALLOWED_POST_FIELDS = [
   "category",
   "tags",
   "publishedAt",
+  "videoUrl",
+  "videoDuration",
 ];
 // Chỉ cho phép set isPublished khi TẠO bài (chủ bài viết tự chọn đăng ngay hay lưu nháp).
 // Khi UPDATE, isPublished phải đi qua endpoint publish-status riêng để tránh bypass ngầm qua body.
@@ -96,12 +99,38 @@ export const getPosts = async (req, res) => {
   if (featured) {
     query.isFeature = true;
   }
+  const hasVideo = req.query.hasVideo;
+  if (hasVideo === "true") {
+    // $exists cần thiết vì bài viết cũ (trước khi có field này) không có videoUrl,
+    // nếu chỉ dùng $ne: "" thì field bị thiếu cũng bị coi là "khác rỗng" -> sai.
+    query.videoUrl = { $exists: true, $nin: ["", null] };
+  } else if (hasVideo === "false") {
+    query.$or = [
+      { videoUrl: { $exists: false } },
+      { videoUrl: "" },
+      { videoUrl: null },
+    ];
+  }
 
   const posts = await Post.find(query)
-    .populate("user", "username last_name first_name")
+    .populate("user", "username img last_name first_name")
     .sort(sortObj)
     .limit(limit)
-    .skip((page - 1) * limit);
+    .skip((page - 1) * limit)
+    .lean();
+
+  const postIds = posts.map((p) => p._id);
+  const commentCounts = await Comment.aggregate([
+    { $match: { post: { $in: postIds }, status: "approved" } },
+    { $group: { _id: "$post", count: { $sum: 1 } } },
+  ]);
+  const commentCountMap = new Map(
+    commentCounts.map((c) => [c._id.toString(), c.count])
+  );
+  posts.forEach((post) => {
+    post.commentCount = commentCountMap.get(post._id.toString()) || 0;
+  });
+
   const totalPosts = await Post.countDocuments(query);
   const hasMore = page * limit < totalPosts;
   const totalPages = Math.ceil(totalPosts / limit);
@@ -114,7 +143,8 @@ export const sumAllPost = async (req, res) => {
   res.status(200).json({ totalPosts });
 };
 export const sumAllPostByUser = async (req, res) => {
-  if (req.role === "admin") {
+  const forceOwn = req.query.scope === "own";
+  if (req.role === "admin" && !forceOwn) {
     const totalPosts = await Post.countDocuments({ isPublished: true });
     return res.status(200).json({ totalPosts });
   }
@@ -126,10 +156,14 @@ export const sumAllPostByUser = async (req, res) => {
 export const getPostByUser = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 5;
-  if (req.role === "admin") {
+  // scope=own forces "posts I personally wrote" even for an admin caller —
+  // used by personal-profile views (/cms/personal, /user), as opposed to the
+  // admin moderation table which intentionally wants everyone's posts.
+  const forceOwn = req.query.scope === "own";
+  if (req.role === "admin" && !forceOwn) {
     const posts = await Post.find({ isPublished: true }).populate(
       "user",
-      "username last_name first_name"
+      "username img last_name first_name"
     );
     const totalPosts = await Post.countDocuments();
     const hasMore = page * limit < totalPosts;
@@ -139,7 +173,7 @@ export const getPostByUser = async (req, res) => {
   const posts = await Post.find({
     user: req.dbUser._id,
     isPublished: true,
-  }).populate("user", "username last_name first_name");
+  }).populate("user", "username img last_name first_name");
   const totalVisits = posts.reduce((sum, post) => sum + (post.visit || 0), 0);
   const totalPosts = await Post.countDocuments({
     user: req.dbUser._id,
@@ -166,7 +200,7 @@ export const getPostByUserSchedule = async (req, res) => {
   if (req.role === "admin") {
     const posts = await Post.find(scheduleFilter).populate(
       "user",
-      "username last_name first_name"
+      "username img last_name first_name"
     );
     const totalPosts = await Post.countDocuments(scheduleFilter);
     const hasMore = page * limit < totalPosts;
@@ -176,7 +210,7 @@ export const getPostByUserSchedule = async (req, res) => {
   const filter = { ...scheduleFilter, user: req.dbUser._id };
   const posts = await Post.find(filter).populate(
     "user",
-    "username last_name first_name"
+    "username img last_name first_name"
   );
   const totalVisits = posts.reduce((sum, post) => sum + (post.visit || 0), 0);
   const totalPosts = await Post.countDocuments(filter);
@@ -191,11 +225,11 @@ export const getUserDraftPosts = async (req, res) => {
   const limit = parseInt(req.query.limit) || 5;
   // Bài nháp thật sự: chưa publish và chưa hẹn giờ đăng.
   const draftFilter = { isPublished: false, publishedAt: null };
-  if (req.role !== "admin") {
+  if (req.role !== "admin" || req.query.scope === "own") {
     draftFilter.user = req.dbUser._id;
   }
   const posts = await Post.find(draftFilter)
-    .populate("user", "username last_name first_name")
+    .populate("user", "username img last_name first_name")
     .sort({ updatedAt: -1 })
     .skip((page - 1) * limit)
     .limit(limit);
@@ -210,7 +244,7 @@ export const getPostByUserId = async (req, res) => {
   const posts = await Post.find({
     user: req.params.id,
     isPublished: true,
-  }).populate("user", "username last_name first_name");
+  }).populate("user", "username img last_name first_name");
   const totalVisits = posts.reduce((sum, post) => sum + (post.visit || 0), 0);
   const totalPosts = await Post.countDocuments({
     user: req.params.id,

@@ -55,25 +55,57 @@ export const createNewComment = async (req, res) => {
   const comment = await newComment.save();
   const post = await Post.findById(req.body.post).populate("user");
   if (!post) return res.status(404).json({ message: "Post not found" });
-  await Notification.create({
-    recipientId: post.user._id,
-    type: "comment",
-    postId: req.body.post,
-    commentId: comment._id,
-    message: `${user.username} bình luận bài viết "${post.title}"`,
-  });
 
-  // Gửi socket real-time đến tác giả
-  io.to(post.user.clerkUserId).emit("new-comment", {
-    type: "comment",
-    postId: req.body.post,
-    message: `🗨️ Ai đó vừa bình luận bài "${post.title}"`,
-  });
-  await sendPushToUser(post.user._id, {
-    title: "Bình luận mới",
-    body: `${user.username} bình luận bài viết "${post.title}"`,
-    url: `/posts/${post.slug}`,
-  });
+  // Thông báo lỗi không được làm hỏng response — bình luận đã lưu thành
+  // công ở trên rồi, một lỗi ở bước báo tin không nên biến thành 500.
+  try {
+    // Trả lời (parentId có giá trị) -> báo cho tác giả của bình luận được
+    // trả lời, vì họ mới là người cần biết. Bình luận trực tiếp vào bài ->
+    // báo cho chủ bài viết. Trước đây cả 2 trường hợp đều báo cho chủ bài
+    // viết, nên khi trả lời bình luận của người khác, người đó không bao
+    // giờ nhận được thông báo.
+    let recipient = post.user;
+    let notificationType = "comment";
+    let notificationMessage = `${user.username} bình luận bài viết "${post.title}"`;
+    let socketMessage = `🗨️ Ai đó vừa bình luận bài "${post.title}"`;
+
+    if (req.body.parentId) {
+      const parentComment = await Comment.findById(
+        req.body.parentId
+      ).populate("user");
+      if (parentComment) {
+        recipient = parentComment.user;
+        notificationType = "reply";
+        notificationMessage = `${user.username} đã trả lời bình luận của bạn trong bài "${post.title}"`;
+        socketMessage = `↩️ ${user.username} đã trả lời bình luận của bạn`;
+      }
+    }
+
+    // Không tự báo cho chính mình (tự bình luận bài của mình, hoặc tự trả
+    // lời bình luận của chính mình).
+    if (recipient && recipient._id.toString() !== user._id.toString()) {
+      await Notification.create({
+        recipientId: recipient._id,
+        type: notificationType,
+        postId: req.body.post,
+        commentId: comment._id,
+        message: notificationMessage,
+      });
+      io.to(recipient.clerkUserId).emit("new-comment", {
+        type: notificationType,
+        postId: req.body.post,
+        message: socketMessage,
+      });
+      await sendPushToUser(recipient._id, {
+        title:
+          notificationType === "reply" ? "Có người trả lời bạn" : "Bình luận mới",
+        body: notificationMessage,
+        url: `/posts/${post.slug}`,
+      });
+    }
+  } catch (err) {
+    console.error("Gửi thông báo bình luận thất bại:", err.message);
+  }
 
   res.status(201).json({ comment });
 };

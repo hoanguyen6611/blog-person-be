@@ -6,6 +6,7 @@ import connectDB from "./lib/connectDB.js";
 import { clerkMiddleware } from "@clerk/express";
 import cors from "cors";
 import "./cron/publishJob.js";
+import "./cron/newsletterJob.js";
 import { setupSwagger } from "./config/swagger.js";
 import { initSocket } from "./socket-server.js";
 

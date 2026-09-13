@@ -288,28 +288,33 @@ export const createNewPost = async (req, res) => {
     ...fields,
   });
   const post = await newPost.save();
-  const followers = await User.find({ follower: user._id });
-  await Promise.all(
-    followers.map(async (follower) => {
-      await notificationModel.create({
-        recipientId: follower._id,
-        type: "post",
-        postId: post._id,
-        message: `${user.username} published a new post "${post.title}"`,
-      });
-      // Gửi socket real-time đến follower
-      io.to(follower.clerkUserId).emit("new-post", {
-        type: "post",
-        postId: post._id,
-        message: `📝 ${user.username} vừa đăng bài viết mới "${post.title}"`,
-      });
-      await sendPushToUser(follower._id, {
-        title: "Bài viết mới",
-        body: `${user.username} vừa đăng bài viết mới "${post.title}"`,
-        url: `/posts/${post.slug}`,
-      });
-    })
-  );
+  // Chỉ báo cho follower khi tác giả chủ động tick "gửi thông báo" lúc đăng
+  // ngay — trước đây block này chạy vô điều kiện cho MỌI lần tạo bài (kể cả
+  // lưu nháp/hẹn giờ), bất kể checkbox có được tick hay không.
+  if (req.body.notifyFollowers) {
+    const followers = await User.find({ follower: user._id });
+    await Promise.all(
+      followers.map(async (follower) => {
+        await notificationModel.create({
+          recipientId: follower._id,
+          type: "post",
+          postId: post._id,
+          message: `${user.username} published a new post "${post.title}"`,
+        });
+        // Gửi socket real-time đến follower
+        io.to(follower.clerkUserId).emit("new-post", {
+          type: "post",
+          postId: post._id,
+          message: `📝 ${user.username} vừa đăng bài viết mới "${post.title}"`,
+        });
+        await sendPushToUser(follower._id, {
+          title: "Bài viết mới",
+          body: `${user.username} vừa đăng bài viết mới "${post.title}"`,
+          url: `/posts/${post.slug}`,
+        });
+      })
+    );
+  }
   res.status(201).json(post);
 };
 export const updatePost = async (req, res) => {
